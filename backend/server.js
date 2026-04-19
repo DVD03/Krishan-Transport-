@@ -57,6 +57,8 @@ app.use('/api/clients', require('./routes/clients'));
 app.use('/api/vehicles', require('./routes/vehicles'));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/employees', require('./routes/employees'));
+app.use('/api/invoices', require('./routes/invoices'));
+app.use('/api/quotations', require('./routes/quotations'));
 
 app.get('/', (req, res) => {
   res.send('Krishan Transport API is running...');

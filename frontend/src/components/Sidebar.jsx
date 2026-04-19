@@ -9,7 +9,9 @@ import {
   LogOut,
   UserCircle,
   FileBarChart,
-  Car
+  Car,
+  FileText,
+  FileCheck
 } from 'lucide-react';
 import './Sidebar.css';
 import logo from '../logo.png';
@@ -21,6 +23,8 @@ const Sidebar = ({ activeTab, setActiveTab, handleLogout, role, userName }) => {
     { id: 'salaries',   label: 'Salary Book',       icon: Contact },
     { id: 'diesel',     label: 'Diesel Book',        icon: Fuel },
     { id: 'payments',   label: 'Payment Book',       icon: CreditCard },
+    { id: 'invoices',   label: 'Invoices',           icon: FileText },
+    { id: 'quotations', label: 'Quotations',         icon: FileCheck },
     { id: 'clients',    label: 'Clients',            icon: Users },
     { id: 'vehicles',   label: 'Vehicles',           icon: Car },
     { id: 'employees',  label: 'Employees',          icon: UserCircle },

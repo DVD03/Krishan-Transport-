@@ -10,6 +10,8 @@ import Clients from './components/Clients';
 import Vehicles from './components/Vehicles';
 import Employees from './components/Employees';
 import FinancialReport from './components/FinancialReport';
+import InvoiceBook from './components/InvoiceBook';
+import QuotationBook from './components/QuotationBook';
 import Login from './components/Login';
 import RoleSelection from './components/RoleSelection';
 import './App.css';
@@ -24,6 +26,8 @@ const PAGE_TITLES = {
   vehicles: 'Vehicles',
   employees: 'Employees',
   reports: 'Financial Report',
+  invoices: 'Professional Invoices',
+  quotations: 'Service Quotations',
 };
 
 const App = () => {
@@ -42,7 +46,7 @@ const App = () => {
   };
 
   const renderContent = () => {
-    const restrictedTabs = ['employees', 'reports', 'salaries', 'clients', 'payments'];
+    const restrictedTabs = ['employees', 'reports', 'salaries', 'clients', 'payments', 'invoices', 'quotations'];
     if (userRole === 'Employee' && restrictedTabs.includes(activeTab)) {
       return <Dashboard role={userRole} name={userName} />;
     }
@@ -57,6 +61,8 @@ const App = () => {
       case 'vehicles':  return <Vehicles />;
       case 'employees': return <Employees />;
       case 'reports':   return <FinancialReport />;
+      case 'invoices':   return <InvoiceBook />;
+      case 'quotations': return <QuotationBook />;
       default:          return <Dashboard role={userRole} name={userName} />;
     }
   };
