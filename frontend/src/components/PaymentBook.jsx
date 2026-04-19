@@ -4,7 +4,7 @@ import Modal from './Modal';
 import PaymentForm from './PaymentForm';
 import { paymentAPI, vehicleAPI } from '../services/api';
 import { generatePDFReport } from '../utils/reportGenerator';
-import { Download, Search, Plus, Filter, Loader2, DollarSign } from 'lucide-react';
+import { Download, Search, PlusCircle, RefreshCw } from 'lucide-react';
 import '../styles/forms.css';
 import '../styles/books.css';
 import VehicleFilter from './VehicleFilter';
@@ -20,6 +20,7 @@ const PaymentBook = () => {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState(null);
   const [editingItem, setEditingItem] = React.useState(null);
+  const [success, setSuccess] = React.useState(null);
   const [searchQuery, setSearchQuery] = React.useState('');
 
   const columns = canManage
@@ -61,7 +62,12 @@ const PaymentBook = () => {
         takenAmount:  `LKR ${(item.takenAmount || 0).toLocaleString()}`,
         balance_val:  item.balance || 0,
         balance:      `LKR ${Number(item.balance || 0).toLocaleString()}`,
-        status:       item.status || 'Pending',
+        status_text:  item.status || 'Pending',
+        status: (
+            <span className={`status-badge ${item.status === 'Paid' ? 'status-active' : 'status-pending'}`}>
+                {item.status || 'Pending'}
+            </span>
+        ),
         action: canManage ? (
           <div className="table-actions">
             <button className="edit-btn" onClick={() => handleEdit(item)}>Edit</button>
@@ -72,7 +78,7 @@ const PaymentBook = () => {
       setPaymentRecords(formatted);
       setError(null);
     } catch (err) {
-      console.error('Error fetching payments:', err);
+      console.error('Fetch Payments Error:', err);
       setError('Connection issue: could not load payment records.');
     } finally {
       setLoading(false);
@@ -100,14 +106,18 @@ const PaymentBook = () => {
     try {
       if (editingItem) {
         await paymentAPI.update(editingItem._id, data);
+        setSuccess('Payment record updated!');
       } else {
         await paymentAPI.create(data);
+        setSuccess('New payment record added!');
       }
       fetchRecords();
       setIsModalOpen(false);
       setEditingItem(null);
+      setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      alert('Error saving payment: ' + err.message);
+      setError(err.response?.data?.message || 'Error saving payment.');
+      setTimeout(() => setError(null), 5000);
     }
   };
 
@@ -120,8 +130,13 @@ const PaymentBook = () => {
     if (window.confirm('Delete this payment record?')) {
       try {
         await paymentAPI.delete(id);
+        setSuccess('Record deleted.');
         fetchRecords();
-      } catch (err) { alert('Error deleting record'); }
+        setTimeout(() => setSuccess(null), 3000);
+      } catch (err) {
+        setError('Could not delete record.');
+        setTimeout(() => setError(null), 5000);
+      }
     }
   };
 
@@ -134,7 +149,7 @@ const PaymentBook = () => {
       r.driverName || '—',
       r.hireAmount || '—',
       r.balance || '—',
-      r.status || '—'
+      r.status_text || '—'
     ]);
     
     generatePDFReport({
@@ -170,6 +185,7 @@ const PaymentBook = () => {
 
       <div className="book-filters">
         <div className="search-box">
+          <Search className="search-icon" size={18} />
           <input 
             type="text" 
             placeholder="Search client, driver, location..." 
@@ -178,34 +194,29 @@ const PaymentBook = () => {
           />
         </div>
         <div className="filter-actions">
-          <button className="secondary-btn" onClick={handleExportPDF} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <button className="secondary-btn" onClick={fetchRecords}>
+            <RefreshCw size={16} className={loading ? 'spinner' : ''} />
+          </button>
+          <button className="secondary-btn" onClick={handleExportPDF}>
             <Download size={16} /> Export PDF
           </button>
           {canManage && (
             <button className="add-btn" onClick={() => { setEditingItem(null); setIsModalOpen(true); }}>
-              + Add Payment
+              <PlusCircle size={18} /> Add Payment
             </button>
           )}
         </div>
       </div>
 
+      {success && <div className="success-banner">{success}</div>}
       {error && <div className="error-banner">{error}</div>}
 
-      {loading ? (
-        <div className="loading-state">
-          <Loader2 className="spinner" size={32} />
-          <p>Loading payment history...</p>
-        </div>
-      ) : (
-        <div className="table-responsive">
-          <DataTable 
-            columns={columns} 
-            data={filteredRecords} 
-            loading={loading}
-            emptyMessage="No payment records found matching your selection." 
-          />
-        </div>
-      )}
+      <DataTable 
+        columns={columns} 
+        data={filteredRecords} 
+        loading={loading}
+        emptyMessage={loading ? "Connecting to service..." : "No payment records found."} 
+      />
 
       <Modal 
         isOpen={isModalOpen} 

@@ -4,7 +4,7 @@ import Modal from './Modal';
 import EmployeeForm from './EmployeeForm';
 import { employeeAPI } from '../services/api';
 import { generatePDFReport } from '../utils/reportGenerator';
-import { Download, Search, Users, Activity, ShieldCheck } from 'lucide-react';
+import { Download, Search, UserPlus, RefreshCw } from 'lucide-react';
 import '../styles/forms.css';
 import '../styles/books.css';
 
@@ -34,6 +34,7 @@ const Employees = () => {
     try {
       const response = await employeeAPI.get();
       const raw = Array.isArray(response.data) ? response.data : [];
+      
       const formatted = raw.map(item => ({
         ...item,
         name: item.name || '—',
@@ -57,6 +58,7 @@ const Employees = () => {
       setRecords(formatted);
       setError(null);
     } catch (err) {
+      console.error('Fetch Employees Error:', err);
       setError('Connection issue: could not load employee directory.');
     } finally {
       setLoading(false);
@@ -67,10 +69,10 @@ const Employees = () => {
     try {
       if (editingItem) {
         await employeeAPI.update(editingItem._id, data);
-        setSuccess('Employee record updated successfully.');
+        setSuccess('Employee updated successfully.');
       } else {
         await employeeAPI.create(data);
-        setSuccess('New employee registered successfully.');
+        setSuccess('New employee registered.');
       }
       fetchRecords();
       setIsModalOpen(false);
@@ -113,10 +115,10 @@ const Employees = () => {
     ]);
     
     generatePDFReport({
-      title: 'Employee Directory Report',
+      title: 'Employee Directory',
       columns: exportColumns,
       data: exportData,
-      filename: `Employees_Report_${new Date().toISOString().split('T')[0]}.pdf`
+      filename: `Employees_${new Date().toISOString().split('T')[0]}.pdf`
     });
   };
 
@@ -134,8 +136,7 @@ const Employees = () => {
   const stats = React.useMemo(() => {
     const total = records.length;
     const active = records.filter(r => r.status_text === 'Active').length;
-    const drivers = records.filter(r => r.role === 'Driver').length;
-    return { total, drivers, active };
+    return { total, active };
   }, [records]);
 
   return (
@@ -145,22 +146,18 @@ const Employees = () => {
           <label>TOTAL EMPLOYEES</label>
           <h3>{stats.total}</h3>
         </div>
-        <div className="summary-item">
+        <div className="summary-item" style={{ borderRight: 'none' }}>
           <label>ACTIVE STAFF</label>
           <h3 style={{ color: '#10B981' }}>{stats.active}</h3>
-        </div>
-        <div className="summary-item" style={{ borderRight: 'none' }}>
-          <label>DRIVERS</label>
-          <h3 style={{ color: '#2563EB' }}>{stats.drivers}</h3>
         </div>
       </div>
 
       <div className="book-filters">
         <div className="search-box">
-          <Search className="search-icon" size={16} />
+          <Search className="search-icon" size={18} />
           <input
             type="text"
-            placeholder="Search by name, NIC, or contact..."
+            placeholder="Search name, NIC, or contact..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
           />
@@ -175,12 +172,15 @@ const Employees = () => {
             <option value="Admin">Admin</option>
             <option value="Other">Other</option>
           </select>
-          <button className="secondary-btn" onClick={handleExportPDF} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Download size={16} /> Export PDF
+          <button className="secondary-btn" onClick={handleExportPDF}>
+            <Download size={16} /> Export
+          </button>
+          <button className="secondary-btn" onClick={fetchRecords}>
+            <RefreshCw size={16} className={loading ? 'spinner' : ''} />
           </button>
           {canManage && (
             <button className="add-btn" onClick={() => { setEditingItem(null); setIsModalOpen(true); }}>
-              + Register Employee
+              <UserPlus size={18} /> Register
             </button>
           )}
         </div>
@@ -193,7 +193,7 @@ const Employees = () => {
         columns={columns}
         data={filteredRecords}
         loading={loading}
-        emptyMessage={loading ? 'Loading employees...' : 'No employees found matching the criteria.'}
+        emptyMessage={loading ? 'Connecting to server...' : 'No employees found.'}
       />
 
       <Modal

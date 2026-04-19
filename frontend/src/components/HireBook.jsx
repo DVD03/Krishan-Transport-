@@ -4,7 +4,7 @@ import Modal from './Modal';
 import HireForm from './HireForm';
 import { hireAPI, vehicleAPI } from '../services/api';
 import { generatePDFReport } from '../utils/reportGenerator';
-import { Download } from 'lucide-react';
+import { Download, Search, PlusCircle, RefreshCw } from 'lucide-react';
 import '../styles/forms.css';
 import '../styles/books.css';
 import VehicleFilter from './VehicleFilter';
@@ -65,7 +65,12 @@ const HireBook = () => {
         billAmount: `LKR ${(item.billAmount || 0).toLocaleString()}`,
         totalAmount_disp: `LKR ${(item.totalAmount || 0).toLocaleString()}`,
         details:    item.details || '—',
-        status:     item.status  || 'Pending',
+        status_text: item.status || 'Pending',
+        status: (
+            <span className={`status-badge ${item.status === 'Completed' ? 'status-active' : 'status-pending'}`}>
+                {item.status || 'Pending'}
+            </span>
+        ),
         action: canManage ? (
           <div className="table-actions">
             <button className="edit-btn" onClick={() => handleEdit(item)}>Edit</button>
@@ -76,6 +81,7 @@ const HireBook = () => {
       setHireRecords(formatted);
       setError(null);
     } catch (err) {
+      console.error('Fetch Hires Error:', err);
       setError('Connection issue: could not load hire records.');
     } finally {
       setLoading(false);
@@ -188,6 +194,7 @@ const HireBook = () => {
 
       <div className="book-filters">
         <div className="search-box">
+          <Search className="search-icon" size={18} />
           <input 
             type="text" 
             placeholder="Search client, bill, TS#, location..." 
@@ -196,12 +203,17 @@ const HireBook = () => {
           />
         </div>
         <div className="filter-actions">
-          <button className="secondary-btn" onClick={handleExportPDF} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+           <button className="secondary-btn" onClick={fetchRecords}>
+            <RefreshCw size={16} className={loading ? 'spinner' : ''} />
+          </button>
+          <button className="secondary-btn" onClick={handleExportPDF}>
             <Download size={16} /> Export PDF
           </button>
-          <button className="add-btn" onClick={() => { setEditingItem(null); setIsModalOpen(true); }}>
-            + Add Job
-          </button>
+          {canManage && (
+            <button className="add-btn" onClick={() => { setEditingItem(null); setIsModalOpen(true); }}>
+              <PlusCircle size={18} /> Add Job
+            </button>
+          )}
         </div>
       </div>
 
@@ -212,7 +224,7 @@ const HireBook = () => {
         columns={columns} 
         data={filteredRecords} 
         loading={loading}
-        emptyMessage={loading ? "Loading..." : "No hire records found."} 
+        emptyMessage={loading ? "Connecting to service..." : "No hire records found."} 
       />
 
       <Modal 

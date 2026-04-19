@@ -1,34 +1,43 @@
 .table-container {
   width: 100%;
-  overflow-x: auto;
-  background-color: var(--bg-main);
+  overflow: hidden; /* Changed from x to hidden to use responsive table inside */
+  background-color: white;
   border-radius: var(--radius);
   border: 1px solid var(--border);
   box-shadow: var(--shadow-sm);
+  margin-top: 10px;
+}
+
+.custom-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
 }
 
 .custom-table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
+  min-width: 800px; /* Ensure table doesn't get too cramped */
 }
 
 .custom-table th {
-  padding: 16px 24px;
-  background-color: var(--bg-secondary);
-  color: var(--text-secondary);
-  font-size: 0.75rem;
+  padding: 14px 20px;
+  background-color: #F8FAFC;
+  color: #64748B;
+  font-size: 0.72rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1.5px solid var(--border);
+  white-space: nowrap;
 }
 
 .custom-table td {
-  padding: 16px 24px;
+  padding: 16px 20px;
   color: var(--text-main);
-  font-size: 0.9rem;
-  border-bottom: 1px solid var(--border);
+  font-size: 0.88rem;
+  border-bottom: 1px solid #F1F5F9;
+  white-space: nowrap;
 }
 
 .custom-table tr:last-child td {
@@ -36,58 +45,91 @@
 }
 
 .custom-table tr:hover td {
-  background-color: #F8FAFC;
+  background-color: #F9FAFB;
 }
 
 .empty-row {
-  padding: 80px 0 !important;
+  padding: 100px 0 !important;
+  text-align: center;
 }
 
 .empty-content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  justify-content: center;
+  gap: 16px;
   color: var(--text-secondary);
 }
 
 .empty-icon {
-  font-size: 2.5rem;
+  font-size: 3rem;
+  opacity: 0.5;
+}
+
+.loading-cell { padding: 60px 0 !important; }
+
+/* ── Shimmer Loader ── */
+.shimmer-loader {
+  width: 100%;
+  height: 200px;
+  background: linear-gradient(90deg, #f0f2f5 25%, #f7f9fa 50%, #f0f2f5 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+  border-radius: 8px;
+}
+
+@keyframes loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 .table-actions {
   display: flex;
-  gap: 8px;
+  gap: 10px;
+  align-items: center;
 }
 
 .edit-btn, .delete-btn {
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 0.85rem;
-  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
   cursor: pointer;
-  border: none;
+  border: 1.5px solid transparent;
   transition: all 0.2s;
+  font-family: inherit;
 }
 
 .edit-btn {
   background-color: transparent;
   color: var(--primary);
-  border: 1px solid var(--primary);
+  border-color: #DBEAFE;
 }
 
 .edit-btn:hover {
   background-color: var(--primary);
   color: white;
+  border-color: var(--primary);
 }
 
 .delete-btn {
   background-color: transparent;
   color: #EF4444;
-  border: 1px solid #EF4444;
+  border-color: #FEE2E2;
 }
 
 .delete-btn:hover {
   background-color: #EF4444;
   color: white;
+  border-color: #EF4444;
 }
+
+/* ── Status Chip (if used inline) ── */
+.status-chip {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.72rem;
+    font-weight: 600;
+}
+.status-chip.active { background: #DCFCE7; color: #16A34A; }
