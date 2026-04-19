@@ -2,6 +2,7 @@ import React from 'react';
 import DataTable from './DataTable';
 import Modal from './Modal';
 import HireForm from './HireForm';
+import RecordDetails from './RecordDetails';
 import { hireAPI, vehicleAPI } from '../services/api';
 import { generatePDFReport } from '../utils/reportGenerator';
 import { Download, Search, PlusCircle, RefreshCw } from 'lucide-react';
@@ -14,6 +15,9 @@ const HireBook = () => {
   const canManage = ['Admin', 'Manager'].includes(userRole);
 
   const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [viewModalOpen, setViewModalOpen] = React.useState(false);
+  const [selectedRecord, setSelectedRecord] = React.useState(null);
+  
   const [hireRecords, setHireRecords] = React.useState([]);
   const [vehicles, setVehicles] = React.useState([]);
   const [selectedVehicle, setSelectedVehicle] = React.useState(null);
@@ -23,9 +27,8 @@ const HireBook = () => {
   const [success, setSuccess] = React.useState(null);
   const [searchQuery, setSearchQuery] = React.useState('');
 
-  const columns = canManage
-    ? ['DATE', 'BILL#', 'TS#', 'COMPANY', 'VEHICLE', 'LOCATION', 'DRIVER', 'HELPER', 'START', 'END', 'HOURS', 'MIN HRS', 'BILL AMT', 'D COST', 'COMM', 'TOTAL', 'REMARKS', 'STATUS', 'ACTION']
-    : ['DATE', 'BILL#', 'TS#', 'COMPANY', 'VEHICLE', 'LOCATION', 'DRIVER', 'HELPER', 'START', 'END', 'HOURS', 'MIN HRS', 'BILL AMT', 'D COST', 'COMM', 'TOTAL', 'REMARKS', 'STATUS'];
+  // Simplified Table Columns
+  const tableColumns = ['DATE', 'BILL#', 'COMPANY', 'VEHICLE', 'LOCATION', 'TOTAL', 'STATUS', 'ACTION'];
   
   React.useEffect(() => {
     fetchRecords();
@@ -71,12 +74,12 @@ const HireBook = () => {
                 {item.status || 'Pending'}
             </span>
         ),
-        action: canManage ? (
-          <div className="table-actions">
-            <button className="edit-btn" onClick={() => handleEdit(item)}>Edit</button>
-            <button className="delete-btn" onClick={() => handleDelete(item._id)}>Delete</button>
+        action: (
+          <div className="table-actions" onClick={e => e.stopPropagation()}>
+            {canManage && <button className="edit-btn" onClick={() => handleEdit(item)}>Edit</button>}
+            {canManage && <button className="delete-btn" onClick={() => handleDelete(item._id)}>Delete</button>}
           </div>
-        ) : undefined
+        )
       }));
       setHireRecords(formatted);
       setError(null);
@@ -146,8 +149,14 @@ const HireBook = () => {
     }
   };
 
+  const handleRowClick = (record) => {
+    setSelectedRecord(record);
+    setViewModalOpen(true);
+  };
+
   const handleExportPDF = () => {
-    const exportColumns = ['DATE', 'BILL#', 'TS#', 'COMPANY', 'VEHICLE', 'LOCATION', 'DRIVER', 'HELPER', 'HOURS', 'BILL AMT', 'TOTAL'];
+    // PDF Report ALWAYS contains full 15+ detail columns as requested
+    const exportColumns = ['DATE', 'BILL#', 'TS#', 'COMPANY', 'VEHICLE', 'LOCATION', 'DRIVER', 'HELPER', 'START', 'END', 'HOURS', 'MIN HRS', 'BILL AMT', 'D COST', 'COMM', 'TOTAL', 'STATUS'];
     const exportData = filteredRecords.map(r => [
       r.date || '—',
       r.billNumber || '—',
@@ -157,15 +166,22 @@ const HireBook = () => {
       r.location || '—',
       r.driverName || '—',
       r.helperName || '—',
+      r.startTime || '—',
+      r.endTime || '—',
       r.workingHours || '—',
+      r.minimumHours || '—',
       r.billAmount || '—',
-      r.totalAmount_disp || '—'
+      r.dieselCost || '—',
+      r.commission || '—',
+      r.totalAmount_disp || '—',
+      r.status_text || '—'
     ]);
+    
     generatePDFReport({
-      title: 'Hire Book Report',
+      title: 'Full Hire Book Report',
       columns: exportColumns,
       data: exportData,
-      filename: `HireBook_Report_${new Date().toISOString().split('T')[0]}.pdf`
+      filename: `HireReport_Full_${new Date().toISOString().split('T')[0]}.pdf`
     });
   };
 
@@ -194,7 +210,7 @@ const HireBook = () => {
 
       <div className="book-filters">
         <div className="search-box">
-          <Search className="search-icon" size={18} />
+          <Search className="search-icon" size={20} style={{ minWidth: '20px' }} />
           <input 
             type="text" 
             placeholder="Search client, bill, TS#, location..." 
@@ -202,16 +218,16 @@ const HireBook = () => {
             onChange={e => setSearchQuery(e.target.value)}
           />
         </div>
-        <div className="filter-actions">
-           <button className="secondary-btn" onClick={fetchRecords}>
-            <RefreshCw size={16} className={loading ? 'spinner' : ''} />
+        <div className="filter-actions" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <button className="secondary-btn" onClick={fetchRecords} title="Refresh">
+            <RefreshCw size={18} className={loading ? 'spinner' : ''} />
           </button>
           <button className="secondary-btn" onClick={handleExportPDF}>
-            <Download size={16} /> Export PDF
+            <Download size={18} /> <span>Full Report</span>
           </button>
           {canManage && (
             <button className="add-btn" onClick={() => { setEditingItem(null); setIsModalOpen(true); }}>
-              <PlusCircle size={18} /> Add Job
+              <PlusCircle size={18} /> <span>Add Job</span>
             </button>
           )}
         </div>
@@ -221,12 +237,27 @@ const HireBook = () => {
       {error && <div className="error-banner">{error}</div>}
 
       <DataTable 
-        columns={columns} 
+        columns={tableColumns} 
         data={filteredRecords} 
         loading={loading}
+        onRowClick={handleRowClick}
         emptyMessage={loading ? "Connecting to service..." : "No hire records found."} 
       />
 
+      {/* Detail View Modal */}
+      <Modal 
+        isOpen={viewModalOpen} 
+        onClose={() => setViewModalOpen(false)} 
+        title="Hire Job Details"
+        wide
+      >
+        <RecordDetails data={selectedRecord} type="hire" />
+        <div className="modal-footer" style={{ padding: '15px 24px', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end', background: '#F8FAFC' }}>
+            <button className="secondary-btn" onClick={() => setViewModalOpen(false)}>Close</button>
+        </div>
+      </Modal>
+
+      {/* Edit/Add Modal */}
       <Modal 
         isOpen={isModalOpen} 
         onClose={() => { setIsModalOpen(false); setEditingItem(null); }} 

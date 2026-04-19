@@ -2,6 +2,7 @@ import React from 'react';
 import DataTable from './DataTable';
 import Modal from './Modal';
 import PaymentForm from './PaymentForm';
+import RecordDetails from './RecordDetails';
 import { paymentAPI, vehicleAPI } from '../services/api';
 import { generatePDFReport } from '../utils/reportGenerator';
 import { Download, Search, PlusCircle, RefreshCw } from 'lucide-react';
@@ -14,6 +15,9 @@ const PaymentBook = () => {
   const canManage = ['Admin', 'Manager'].includes(userRole);
 
   const [isModalOpen, setIsModalOpen] = React.useState(false);
+  const [viewModalOpen, setViewModalOpen] = React.useState(false);
+  const [selectedRecord, setSelectedRecord] = React.useState(null);
+
   const [paymentRecords, setPaymentRecords] = React.useState([]);
   const [vehicles, setVehicles] = React.useState([]);
   const [selectedVehicle, setSelectedVehicle] = React.useState(null);
@@ -23,9 +27,8 @@ const PaymentBook = () => {
   const [success, setSuccess] = React.useState(null);
   const [searchQuery, setSearchQuery] = React.useState('');
 
-  const columns = canManage
-    ? ['DATE', 'CLIENT', 'VEHICLE', 'DRIVER', 'LOCATION', 'START', 'END', 'TOTAL HOURS', 'MIN HRS', 'HOURS IN BILL', 'HIRE AMT', 'COMM', 'DAY PAY', 'TAKEN', 'BALANCE', 'STATUS', 'ACTION']
-    : ['DATE', 'CLIENT', 'VEHICLE', 'DRIVER', 'LOCATION', 'START', 'END', 'TOTAL HOURS', 'MIN HRS', 'HOURS IN BILL', 'HIRE AMT', 'COMM', 'DAY PAY', 'TAKEN', 'BALANCE', 'STATUS'];
+  // Simplified Table Columns
+  const tableColumns = ['DATE', 'CLIENT', 'VEHICLE', 'HIRE AMT', 'BALANCE', 'STATUS', 'ACTION'];
   
   React.useEffect(() => {
     fetchRecords();
@@ -68,12 +71,12 @@ const PaymentBook = () => {
                 {item.status || 'Pending'}
             </span>
         ),
-        action: canManage ? (
-          <div className="table-actions">
-            <button className="edit-btn" onClick={() => handleEdit(item)}>Edit</button>
-            <button className="delete-btn" onClick={() => handleDelete(item._id)}>Delete</button>
+        action: (
+          <div className="table-actions" onClick={e => e.stopPropagation()}>
+            {canManage && <button className="edit-btn" onClick={() => handleEdit(item)}>Edit</button>}
+            {canManage && <button className="delete-btn" onClick={() => handleDelete(item._id)}>Delete</button>}
           </div>
-        ) : null
+        )
       }));
       setPaymentRecords(formatted);
       setError(null);
@@ -140,23 +143,34 @@ const PaymentBook = () => {
     }
   };
 
+  const handleRowClick = (record) => {
+    setSelectedRecord(record);
+    setViewModalOpen(true);
+  };
+
   const handleExportPDF = () => {
-    const exportColumns = ['DATE', 'CLIENT', 'VEHICLE', 'DRIVER', 'HIRE AMT', 'BALANCE', 'STATUS'];
+    const exportColumns = ['DATE', 'CLIENT', 'VEHICLE', 'DRIVER', 'LOCATION', 'START', 'END', 'TOTAL HOURS', 'MIN HRS', 'HOURS IN BILL', 'HIRE AMT', 'BALANCE', 'STATUS'];
     const exportData = filteredRecords.map(r => [
       r.date || '—',
       r.client || '—',
       r.vehicle || '—',
       r.driverName || '—',
+      r.location || '—',
+      r.startTime || '—',
+      r.endTime || '—',
+      r.totalHours || '—',
+      r.minimumHours || '—',
+      r.hoursInBill || '—',
       r.hireAmount || '—',
       r.balance || '—',
       r.status_text || '—'
     ]);
     
     generatePDFReport({
-      title: 'Payment Book Report',
+      title: 'Full Payment Book Report',
       columns: exportColumns,
       data: exportData,
-      filename: `PaymentBook_Report_${new Date().toISOString().split('T')[0]}.pdf`
+      filename: `PaymentBook_Full_${new Date().toISOString().split('T')[0]}.pdf`
     });
   };
 
@@ -185,7 +199,7 @@ const PaymentBook = () => {
 
       <div className="book-filters">
         <div className="search-box">
-          <Search className="search-icon" size={18} />
+          <Search className="search-icon" size={20} style={{ minWidth: '20px' }} />
           <input 
             type="text" 
             placeholder="Search client, driver, location..." 
@@ -193,16 +207,16 @@ const PaymentBook = () => {
             onChange={e => setSearchQuery(e.target.value)}
           />
         </div>
-        <div className="filter-actions">
-          <button className="secondary-btn" onClick={fetchRecords}>
-            <RefreshCw size={16} className={loading ? 'spinner' : ''} />
+        <div className="filter-actions" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <button className="secondary-btn" onClick={fetchRecords} title="Refresh">
+            <RefreshCw size={18} className={loading ? 'spinner' : ''} />
           </button>
           <button className="secondary-btn" onClick={handleExportPDF}>
-            <Download size={16} /> Export PDF
+            <Download size={18} /> <span>Full Report</span>
           </button>
           {canManage && (
             <button className="add-btn" onClick={() => { setEditingItem(null); setIsModalOpen(true); }}>
-              <PlusCircle size={18} /> Add Payment
+              <PlusCircle size={18} /> <span>Add Payment</span>
             </button>
           )}
         </div>
@@ -212,12 +226,27 @@ const PaymentBook = () => {
       {error && <div className="error-banner">{error}</div>}
 
       <DataTable 
-        columns={columns} 
+        columns={tableColumns} 
         data={filteredRecords} 
         loading={loading}
+        onRowClick={handleRowClick}
         emptyMessage={loading ? "Connecting to service..." : "No payment records found."} 
       />
 
+      {/* Detail View Modal */}
+      <Modal 
+        isOpen={viewModalOpen} 
+        onClose={() => setViewModalOpen(false)} 
+        title="Payment Record Details"
+        wide
+      >
+        <RecordDetails data={selectedRecord} type="payment" />
+        <div className="modal-footer" style={{ padding: '15px 24px', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end', background: '#F8FAFC' }}>
+            <button className="secondary-btn" onClick={() => setViewModalOpen(false)}>Close</button>
+        </div>
+      </Modal>
+
+      {/* Edit/Add Modal */}
       <Modal 
         isOpen={isModalOpen} 
         onClose={() => { setIsModalOpen(false); setEditingItem(null); }} 

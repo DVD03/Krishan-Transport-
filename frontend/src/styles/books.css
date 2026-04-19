@@ -63,13 +63,13 @@
   margin: 0;
 }
 
-/* ── Filters & Search ── */
+/* ── Filters & Search Header — FIXED FLEXBOX ── */
 .book-filters {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  flex-wrap: wrap;
+  width: 100%;
 }
 
 .search-box {
@@ -80,9 +80,10 @@
   border: 1.5px solid var(--border);
   border-radius: 10px;
   padding: 10px 16px;
-  width: 100%;
-  max-width: 480px;
+  flex: 1; /* Allow to grow */
+  max-width: 480px; /* But cap it */
   transition: all 0.2s;
+  min-height: 44px;
 }
 
 .search-box:focus-within {
@@ -91,8 +92,11 @@
 }
 
 .search-icon {
-  color: var(--text-secondary);
+  color: var(--text-secondary) !important;
   flex-shrink: 0;
+  display: flex !important; /* Force visibility */
+  align-items: center;
+  justify-content: center;
 }
 
 .search-box input {
@@ -109,34 +113,20 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-shrink: 0; /* Don't squash buttons */
 }
 
-.filter-actions select {
-    padding: 10px 14px;
-    border: 1.5px solid var(--border);
-    border-radius: 10px;
-    font-size: 0.88rem;
-    font-family: inherit;
-    color: var(--text-main);
-    background: white;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.filter-actions select:focus {
-    border-color: var(--primary);
-    outline: none;
-}
-
-/* ── Buttons ── */
+/* ── Buttons — EXPLICIT DIMENSIONS ── */
 .add-btn, .secondary-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 10px 20px;
+  padding: 0 20px;
+  height: 44px; /* Matches search box height */
   border-radius: 10px;
-  font-weight: 600;
-  font-size: 0.9rem;
+  font-weight: 700;
+  font-size: 0.88rem;
   cursor: pointer;
   transition: all 0.2s;
   font-family: inherit;
@@ -168,35 +158,46 @@
   background: var(--bg-secondary);
 }
 
-/* ── Status Badges (Standardized) ── */
+.filter-actions select {
+    padding: 0 14px;
+    height: 44px;
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    font-size: 0.88rem;
+    font-family: inherit;
+    color: var(--text-main);
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+/* ── Status Badges ── */
 .status-badge {
   display: inline-flex;
   align-items: center;
   padding: 4px 10px;
   border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 700;
+  font-size: 0.72rem;
+  font-weight: 800;
   text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .status-active { background: #DCFCE7; color: #15803D; }
 .status-inactive { background: #FEE2E2; color: #B91C1C; }
 .status-pending { background: #FEF9C3; color: #854D0E; }
 
-/* ── Hire Card Wrapper (if needed) ── */
-.book-container .table-container {
-    margin-top: 8px;
-}
-
 /* ── Responsive ── */
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .book-filters {
     flex-direction: column;
     align-items: stretch;
+    gap: 12px;
   }
   
   .search-box {
     max-width: none;
+    width: 100%;
   }
   
   .filter-actions {
@@ -204,20 +205,6 @@
   }
 }
 
-/* ── Banner/Feedback ── */
-.success-banner, .error-banner {
-    padding: 12px 18px;
-    border-radius: 10px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    margin-bottom: 8px;
-    animation: slideIn 0.3s ease-out;
-}
-
-@keyframes slideIn {
-    from { opacity: 0; transform: translateX(-10px); }
-    to { opacity: 1; transform: translateX(0); }
-}
-
-.success-banner { background: #DCFCE7; color: #15803D; border: 1px solid #BBF7D0; }
-.error-banner { background: #FEE2E2; color: #B91C1C; border: 1px solid #FECACA; }
+/* ── Spinner for refreshed load ── */
+.spinner { animation: spin 1s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

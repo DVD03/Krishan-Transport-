@@ -1,7 +1,7 @@
 import React from 'react';
 import './DataTable.css';
 
-const DataTable = ({ columns, data, emptyMessage, loading }) => {
+const DataTable = ({ columns, data, emptyMessage, loading, onRowClick }) => {
   return (
     <div className="table-container">
       <div className="custom-table-wrapper">
@@ -22,7 +22,11 @@ const DataTable = ({ columns, data, emptyMessage, loading }) => {
               </tr>
             ) : (data && data.length > 0) ? (
               data.map((row, rowIndex) => (
-                <tr key={rowIndex}>
+                  <tr 
+                    key={rowIndex} 
+                    onClick={() => onRowClick && onRowClick(row)}
+                    className={onRowClick ? 'clickable-row' : ''}
+                  >
                   {columns.map((col, colIndex) => {
                     // Field mapping logic
                     const fieldMap = {

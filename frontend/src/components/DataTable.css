@@ -48,6 +48,15 @@
   background-color: #F9FAFB;
 }
 
+.clickable-row {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.clickable-row:hover td {
+    background-color: #F1F5F9 !important;
+}
+
 .empty-row {
   padding: 100px 0 !important;
   text-align: center;
