@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { ArrowLeft } from 'lucide-react';
 import logo from '../logo.png';
 import './Login.css';
@@ -15,7 +15,7 @@ const Login = ({ onLoginSuccess, roleContext, onBack }) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await axios.post('http://localhost:5000/api/auth/login', { username, password });
+      const res = await api.post('/auth/login', { username, password });
       if (res.data && res.data.token) {
         localStorage.setItem('kt_auth_token', res.data.token);
         localStorage.setItem('kt_user_role', res.data.user.role);
