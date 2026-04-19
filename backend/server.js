@@ -25,22 +25,26 @@ app.use(cors({
 app.use(express.json());
 
 // Database Connection & Index Sync
-mongoose.connect(process.env.MONGODB_URI)
-  .then(async () => {
-    console.log('✅ MongoDB Connected');
-    try {
-      // Sync Employees Index (Ensures 'sparse' property is active for optional usernames)
-      const employeeCollection = mongoose.connection.collection('employees');
-      const indexes = await employeeCollection.indexes();
-      if (indexes.some(i => i.name === 'username_1')) {
-        console.log('🔄 Syncing Username Index...');
-        await employeeCollection.dropIndex('username_1');
+if (!process.env.MONGODB_URI) {
+  console.error("⚠️ MONGODB_URI is not set! Missing environment variable.");
+} else {
+  mongoose.connect(process.env.MONGODB_URI)
+    .then(async () => {
+      console.log('✅ MongoDB Connected');
+      try {
+        // Sync Employees Index
+        const employeeCollection = mongoose.connection.collection('employees');
+        const indexes = await employeeCollection.indexes();
+        if (indexes.some(i => i.name === 'username_1')) {
+          console.log('🔄 Syncing Username Index...');
+          await employeeCollection.dropIndex('username_1');
+        }
+      } catch (err) {
+        console.log('ℹ️ Index sync skipped or already clean.');
       }
-    } catch (err) {
-      console.log('ℹ️ Index sync skipped or already clean.');
-    }
-  })
-  .catch(err => console.error('❌ MongoDB Connection Error:', err));
+    })
+    .catch(err => console.error('❌ MongoDB Connection Error:', err));
+}
 
 // Routes
 app.use('/api/diesel', require('./routes/diesel'));
