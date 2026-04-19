@@ -21,8 +21,8 @@ const PaymentBook = () => {
   const [editingItem, setEditingItem] = React.useState(null);
 
   const columns = canManage
-    ? ['DATE', 'CLIENT', 'VEHICLE', 'HIRE AMT', 'PAID AMT', 'BALANCE', 'STATUS', 'ACTION']
-    : ['DATE', 'CLIENT', 'VEHICLE', 'HIRE AMT', 'PAID AMT', 'BALANCE', 'STATUS'];
+    ? ['DATE', 'CLIENT', 'VEHICLE', 'TOTAL HOURS', 'HOURS IN BILL', 'HIRE AMT', 'COMMISSION', 'TAKEN', 'BALANCE', 'STATUS', 'ACTION']
+    : ['DATE', 'CLIENT', 'VEHICLE', 'TOTAL HOURS', 'HOURS IN BILL', 'HIRE AMT', 'COMMISSION', 'TAKEN', 'BALANCE', 'STATUS'];
   
   React.useEffect(() => {
     fetchRecords();
@@ -43,10 +43,17 @@ const PaymentBook = () => {
       const rawData = Array.isArray(response.data) ? response.data : [];
       const formatted = rawData.map(item => ({
         ...item,
-        date: new Date(item.date).toLocaleDateString(),
-        hireAmount: `LKR ${item.hireAmount}`,
-        paidAmount: `LKR ${item.paidAmount}`,
-        balance: `LKR ${Number(item.balance).toFixed(2)}`,
+        date:         new Date(item.date).toLocaleDateString(),
+        client:       item.client || '—',
+        vehicle:      item.vehicle || '—',
+        totalHours:   item.totalHours ? `${item.totalHours}h` : '—',
+        hoursInBill:  item.hoursInBill ? `${item.hoursInBill}h` : '—',
+        hireAmount:   `LKR ${(item.hireAmount || 0).toLocaleString()}`,
+        commission:   `LKR ${(item.commission || 0).toLocaleString()}`,
+        takenAmount:  `LKR ${(item.takenAmount || 0).toLocaleString()}`,
+        balance_val:  item.balance || 0,
+        balance:      `LKR ${Number(item.balance || 0).toLocaleString()}`,
+        status:       item.status || 'Pending',
         action: canManage ? (
           <div className="table-actions">
             <button className="edit-btn" onClick={() => handleEdit(item)}>Edit</button>
@@ -70,8 +77,8 @@ const PaymentBook = () => {
   }, [paymentRecords, selectedVehicle]);
 
   const stats = React.useMemo(() => {
-    const totalReceived = filteredRecords.reduce((sum, r) => sum + (parseFloat(r.paidAmount?.replace('LKR ', '')) || 0), 0);
-    const outstanding = filteredRecords.reduce((sum, r) => sum + (parseFloat(r.balance?.replace('LKR ', '')) || 0), 0);
+    const totalReceived   = filteredRecords.reduce((sum, r) => sum + (parseFloat(r.hireAmount?.replace('LKR ', '').replace(/,/g,'')) || 0), 0);
+    const outstanding     = filteredRecords.reduce((sum, r) => sum + (r.balance_val || 0), 0);
     return { totalReceived, outstanding, count: filteredRecords.length };
   }, [filteredRecords]);
 

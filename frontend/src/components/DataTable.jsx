@@ -60,7 +60,19 @@ const DataTable = ({ columns, data, emptyMessage, loading }) => {
                     'NIC': 'nic',
                     'ROLE': 'role',
                     'JOINED': 'joined',
-                    'STATUS': 'status'
+                    // Hire Book - New Fields
+                    'COMPANY': 'client',
+                    'DRIVER': 'driverName',
+                    'HOURS': 'workingHours',
+                    'BILL AMT': 'billAmount',
+                    'TOTAL': 'totalAmount_disp',
+                    // Payment Book - New Fields
+                    'TOTAL HOURS': 'totalHours',
+                    'MIN HRS': 'minimumHours',
+                    'HOURS IN BILL': 'hoursInBill',
+                    'COMMISSION': 'commission',
+                    'DAY PAY': 'dayPayment',
+                    'TAKEN': 'takenAmount'
                   };
                   
                   const keyToUse = fieldMap[col] || col.toLowerCase();

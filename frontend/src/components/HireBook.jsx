@@ -23,8 +23,8 @@ const HireBook = () => {
   const [searchQuery, setSearchQuery] = React.useState('');
 
   const columns = canManage
-    ? ['DATE', 'CLIENT', 'EMPLOYEE', 'VEHICLE', 'LOCATION', 'AMOUNT', 'COMMISSION', 'BILL#', 'ACTION']
-    : ['DATE', 'CLIENT', 'EMPLOYEE', 'VEHICLE', 'LOCATION', 'AMOUNT', 'COMMISSION', 'BILL#'];
+    ? ['DATE', 'BILL#', 'COMPANY', 'VEHICLE', 'LOCATION', 'DRIVER', 'HOURS', 'BILL AMT', 'TOTAL', 'STATUS', 'ACTION']
+    : ['DATE', 'BILL#', 'COMPANY', 'VEHICLE', 'LOCATION', 'DRIVER', 'HOURS', 'BILL AMT', 'TOTAL', 'STATUS'];
   
   React.useEffect(() => {
     fetchRecords();
@@ -46,17 +46,23 @@ const HireBook = () => {
       const formatted = rawData.map(item => ({
         ...item,
         date:       new Date(item.date).toLocaleDateString(),
-        employee:   item.employee || '—',
-        amount_val: item.amount,
-        comm_val:   item.commission,
-        amount:     `LKR ${item.amount}`,
-        commission: `LKR ${item.commission}`,
-        action: (
+        billNumber: item.billNumber || '—',
+        client:     item.client || '—',
+        vehicle:    item.vehicle || '—',
+        location:   item.location || '—',
+        driverName: item.driverName || '—',
+        workingHours: item.workingHours ? `${item.workingHours}h` : '—',
+        billAmount_val: item.billAmount || 0,
+        totalAmount_val: item.totalAmount || 0,
+        billAmount: `LKR ${(item.billAmount || 0).toLocaleString()}`,
+        totalAmount_disp: `LKR ${(item.totalAmount || 0).toLocaleString()}`,
+        status: item.status || 'Pending',
+        action: canManage ? (
           <div className="table-actions">
             <button className="edit-btn" onClick={() => handleEdit(item)}>Edit</button>
             <button className="delete-btn" onClick={() => handleDelete(item._id)}>Delete</button>
           </div>
-        )
+        ) : undefined
       }));
       setHireRecords(formatted);
       setError(null);
@@ -79,10 +85,10 @@ const HireBook = () => {
   }, [hireRecords, selectedVehicle, searchQuery]);
 
   const stats = React.useMemo(() => {
-    const totalJobs = filteredRecords.length;
-    const totalRevenue = filteredRecords.reduce((sum, r) => sum + (parseFloat(r.amount_val) || 0), 0);
-    const totalComm = filteredRecords.reduce((sum, r) => sum + (parseFloat(r.comm_val) || 0), 0);
-    return { totalJobs, totalRevenue, totalComm, net: totalRevenue - totalComm };
+    const totalJobs    = filteredRecords.length;
+    const totalRevenue = filteredRecords.reduce((sum, r) => sum + (r.billAmount_val || 0), 0);
+    const totalAmount  = filteredRecords.reduce((sum, r) => sum + (r.totalAmount_val || 0), 0);
+    return { totalJobs, totalRevenue, totalAmount };
   }, [filteredRecords]);
 
   const handleAddJob = async (data) => {
@@ -124,18 +130,18 @@ const HireBook = () => {
   };
 
   const handleExportPDF = () => {
-    const exportColumns = ['DATE', 'CLIENT', 'EMPLOYEE', 'VEHICLE', 'LOCATION', 'AMOUNT', 'COMMISSION', 'BILL#'];
+    const exportColumns = ['DATE', 'BILL#', 'COMPANY', 'VEHICLE', 'LOCATION', 'DRIVER', 'HOURS', 'BILL AMT', 'TOTAL'];
     const exportData = filteredRecords.map(r => [
       r.date || '—',
+      r.billNumber || '—',
       r.client || '—',
-      r.employee || '—',
       r.vehicle || '—',
       r.location || '—',
-      r.amount || '—',
-      r.commission || '—',
-      r.billNumber || '—'
+      r.driverName || '—',
+      r.workingHours || '—',
+      r.billAmount || '—',
+      r.totalAmount_disp || '—'
     ]);
-    
     generatePDFReport({
       title: 'Hire Book Report',
       columns: exportColumns,
@@ -152,16 +158,12 @@ const HireBook = () => {
           <h3>{stats.totalJobs}</h3>
         </div>
         <div className="summary-item">
-          <label>TOTAL REVENUE</label>
+          <label>TOTAL BILL AMT</label>
           <h3 style={{ color: '#2563EB' }}>LKR {stats.totalRevenue.toLocaleString()}</h3>
         </div>
-        <div className="summary-item">
-          <label>COMMISSIONS</label>
-          <h3 style={{ color: '#F59E0B' }}>LKR {stats.totalComm.toLocaleString()}</h3>
-        </div>
         <div className="summary-item" style={{ borderRight: 'none' }}>
-          <label>NET REVENUE</label>
-          <h3 style={{ color: '#10B981' }}>LKR {stats.net.toLocaleString()}</h3>
+          <label>NET TOTAL</label>
+          <h3 style={{ color: '#10B981' }}>LKR {stats.totalAmount.toLocaleString()}</h3>
         </div>
       </div>
 
