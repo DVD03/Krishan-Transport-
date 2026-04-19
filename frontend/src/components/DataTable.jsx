@@ -15,7 +15,7 @@ const DataTable = ({ columns, data, emptyMessage, loading }) => {
         <tbody>
           {loading ? (
             <tr>
-              <td colSpan={columns.length + 1} className="loading-cell">
+              <td colSpan={columns.length} className="loading-cell">
                 <div className="shimmer-loader"></div>
               </td>
             </tr>
@@ -23,9 +23,7 @@ const DataTable = ({ columns, data, emptyMessage, loading }) => {
             data.map((row, rowIndex) => (
               <tr key={rowIndex}>
                 {columns.map((col, colIndex) => {
-                  const key = col.toLowerCase().replace(/#| |\/L/g, '').replace('liters', 'liters').replace('price', 'pricePerLiter').replace('amount', 'amount').replace('commission', 'commission').replace('bill', 'billNumber').replace('month', 'month').replace('employee', 'employee').replace('vehicle', 'vehicle').replace('location', 'location').replace('basic', 'basic').replace('incentive', 'incentive').replace('advance', 'advance').replace('netpay', 'netPay').replace('hireamount', 'hireAmount').replace('paidamount', 'paidAmount').replace('balance', 'balance').replace('status', 'status').replace('action', 'action');
-                  
-                  // Handle mapping based on common keys
+                  // Field mapping logic
                   const fieldMap = {
                     'DATE': 'date',
                     'CLIENT': 'client',
@@ -72,7 +70,21 @@ const DataTable = ({ columns, data, emptyMessage, loading }) => {
                     'HOURS IN BILL': 'hoursInBill',
                     'COMMISSION': 'commission',
                     'DAY PAY': 'dayPayment',
-                    'TAKEN': 'takenAmount'
+                    'TAKEN': 'takenAmount',
+                    'START': 'startTime',
+                    'END': 'endTime',
+                    'REST': 'restTime',
+                    'MIN HRS': 'minimumHours',
+                    'D COST': 'dieselCost',
+                    'COMM': 'commission',
+                    'REMARKS': 'details',
+                    'HELPER': 'helperName',
+                    'TS#': 'timeSheetNumber',
+                    'UNITS': 'totalUnits',
+                    'RATE': 'ratePerUnit',
+                    'TRANSPORT': 'transportCharge',
+                    'DESCRIPTION': 'jobDescription',
+                    'SITE': 'site'
                   };
                   
                   const keyToUse = fieldMap[col] || col.toLowerCase();
@@ -84,7 +96,7 @@ const DataTable = ({ columns, data, emptyMessage, loading }) => {
             <tr>
               <td colSpan={columns.length} className="empty-row">
                 <div className="empty-content">
-                  <div className="empty-icon">📂</div>
+                  <div className="empty-icon"></div>
                   <p>{emptyMessage || 'No records found.'}</p>
                 </div>
               </td>

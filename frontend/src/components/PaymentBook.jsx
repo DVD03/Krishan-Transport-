@@ -4,7 +4,7 @@ import Modal from './Modal';
 import PaymentForm from './PaymentForm';
 import { paymentAPI, vehicleAPI } from '../services/api';
 import { generatePDFReport } from '../utils/reportGenerator';
-import { Download } from 'lucide-react';
+import { Download, Search, Plus, Filter, Loader2, DollarSign } from 'lucide-react';
 import '../styles/forms.css';
 import '../styles/books.css';
 import VehicleFilter from './VehicleFilter';
@@ -20,10 +20,11 @@ const PaymentBook = () => {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState(null);
   const [editingItem, setEditingItem] = React.useState(null);
+  const [searchQuery, setSearchQuery] = React.useState('');
 
   const columns = canManage
-    ? ['DATE', 'CLIENT', 'VEHICLE', 'TOTAL HOURS', 'HOURS IN BILL', 'HIRE AMT', 'COMMISSION', 'TAKEN', 'BALANCE', 'STATUS', 'ACTION']
-    : ['DATE', 'CLIENT', 'VEHICLE', 'TOTAL HOURS', 'HOURS IN BILL', 'HIRE AMT', 'COMMISSION', 'TAKEN', 'BALANCE', 'STATUS'];
+    ? ['DATE', 'CLIENT', 'VEHICLE', 'DRIVER', 'LOCATION', 'START', 'END', 'TOTAL HOURS', 'MIN HRS', 'HOURS IN BILL', 'HIRE AMT', 'COMM', 'DAY PAY', 'TAKEN', 'BALANCE', 'STATUS', 'ACTION']
+    : ['DATE', 'CLIENT', 'VEHICLE', 'DRIVER', 'LOCATION', 'START', 'END', 'TOTAL HOURS', 'MIN HRS', 'HOURS IN BILL', 'HIRE AMT', 'COMM', 'DAY PAY', 'TAKEN', 'BALANCE', 'STATUS'];
   
   React.useEffect(() => {
     fetchRecords();
@@ -47,10 +48,16 @@ const PaymentBook = () => {
         date:         new Date(item.date).toLocaleDateString(),
         client:       item.client || '—',
         vehicle:      item.vehicle || '—',
+        driverName:   item.driverName || '—',
+        location:     item.location || '—',
+        startTime:    item.startTime || '—',
+        endTime:      item.endTime || '—',
         totalHours:   item.totalHours ? `${item.totalHours}h` : '—',
+        minimumHours: item.minimumHours ? `${item.minimumHours}h` : '—',
         hoursInBill:  item.hoursInBill ? `${item.hoursInBill}h` : '—',
         hireAmount:   `LKR ${(item.hireAmount || 0).toLocaleString()}`,
         commission:   `LKR ${(item.commission || 0).toLocaleString()}`,
+        dayPayment:   `LKR ${(item.dayPayment || 0).toLocaleString()}`,
         takenAmount:  `LKR ${(item.takenAmount || 0).toLocaleString()}`,
         balance_val:  item.balance || 0,
         balance:      `LKR ${Number(item.balance || 0).toLocaleString()}`,
@@ -66,16 +73,22 @@ const PaymentBook = () => {
       setError(null);
     } catch (err) {
       console.error('Error fetching payments:', err);
-      setError('Using offline payment records.');
+      setError('Connection issue: could not load payment records.');
     } finally {
       setLoading(false);
     }
   };
 
   const filteredRecords = React.useMemo(() => {
-    if (!selectedVehicle) return paymentRecords;
-    return paymentRecords.filter(r => r.vehicle === selectedVehicle);
-  }, [paymentRecords, selectedVehicle]);
+    return paymentRecords.filter(r => {
+      const matchVehicle = !selectedVehicle || r.vehicle === selectedVehicle;
+      const matchSearch = !searchQuery || 
+        r.client?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        r.driverName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        r.location?.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchVehicle && matchSearch;
+    });
+  }, [paymentRecords, selectedVehicle, searchQuery]);
 
   const stats = React.useMemo(() => {
     const totalReceived   = filteredRecords.reduce((sum, r) => sum + (parseFloat(r.hireAmount?.replace('LKR ', '').replace(/,/g,'')) || 0), 0);
@@ -113,13 +126,13 @@ const PaymentBook = () => {
   };
 
   const handleExportPDF = () => {
-    const exportColumns = ['DATE', 'CLIENT', 'VEHICLE', 'HIRE AMT', 'PAID AMT', 'BALANCE', 'STATUS'];
+    const exportColumns = ['DATE', 'CLIENT', 'VEHICLE', 'DRIVER', 'HIRE AMT', 'BALANCE', 'STATUS'];
     const exportData = filteredRecords.map(r => [
       r.date || '—',
       r.client || '—',
       r.vehicle || '—',
+      r.driverName || '—',
       r.hireAmount || '—',
-      r.paidAmount || '—',
       r.balance || '—',
       r.status || '—'
     ]);
@@ -136,15 +149,15 @@ const PaymentBook = () => {
     <div className="book-container">
       <div className="book-summary">
         <div className="summary-item">
-          <label>TOTAL RECEIVED</label>
-          <h3>LKR {stats.totalReceived.toLocaleString()}</h3>
+          <label>TOTAL HIRES VALUE</label>
+          <h3 style={{ color: '#2563EB' }}>LKR {stats.totalReceived.toLocaleString()}</h3>
         </div>
         <div className="summary-item">
-          <label>OUTSTANDING</label>
-          <h3>LKR {stats.outstanding.toLocaleString()}</h3>
+          <label>OUTSTANDING BALANCE</label>
+          <h3 style={{ color: '#DC2626' }}>LKR {stats.outstanding.toLocaleString()}</h3>
         </div>
-        <div className="summary-item">
-          <label>RECORDS</label>
+        <div className="summary-item" style={{ borderRight: 'none' }}>
+          <label>TOTAL RECORDS</label>
           <h3>{stats.count}</h3>
         </div>
       </div>
@@ -157,34 +170,42 @@ const PaymentBook = () => {
 
       <div className="book-filters">
         <div className="search-box">
-          <input type="text" placeholder="Search client..." />
+          <input 
+            type="text" 
+            placeholder="Search client, driver, location..." 
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+          />
         </div>
         <div className="filter-actions">
-          <select>
-            <option>All Months</option>
-          </select>
-          <select>
-            <option>All Status</option>
-            <option>Pending</option>
-            <option>Paid</option>
-          </select>
           <button className="secondary-btn" onClick={handleExportPDF} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Download size={16} /> Export PDF
           </button>
           {canManage && (
-            <button className="add-btn" onClick={() => setIsModalOpen(true)}>+ Add Payment</button>
+            <button className="add-btn" onClick={() => { setEditingItem(null); setIsModalOpen(true); }}>
+              + Add Payment
+            </button>
           )}
         </div>
       </div>
 
       {error && <div className="error-banner">{error}</div>}
 
-      <DataTable 
-        columns={columns} 
-        data={filteredRecords} 
-        loading={loading}
-        emptyMessage={loading ? "Loading..." : "No payment records found."} 
-      />
+      {loading ? (
+        <div className="loading-state">
+          <Loader2 className="spinner" size={32} />
+          <p>Loading payment history...</p>
+        </div>
+      ) : (
+        <div className="table-responsive">
+          <DataTable 
+            columns={columns} 
+            data={filteredRecords} 
+            loading={loading}
+            emptyMessage="No payment records found matching your selection." 
+          />
+        </div>
+      )}
 
       <Modal 
         isOpen={isModalOpen} 

@@ -161,7 +161,7 @@ const InvoiceBook = () => {
 
                 {/* Client & Date */}
                 <div style={{ background:'#f8fafc', border:'1px solid #e8edf4', borderRadius:'10px', padding:'14px 16px', marginBottom:'12px' }}>
-                  <p style={{ fontSize:'0.75rem', fontWeight:'700', textTransform:'uppercase', letterSpacing:'0.06em', color:'#64748b', marginBottom:'12px', marginTop:0 }}>📋 Client & Job Details</p>
+                  <p style={{ fontSize:'0.75rem', fontWeight:'700', textTransform:'uppercase', letterSpacing:'0.06em', color:'#64748b', marginBottom:'12px', marginTop:0 }}>Client & Job Details</p>
                   <div className="form-grid">
                     <div className="form-group">
                       <label>Client / Company *</label>
@@ -191,7 +191,7 @@ const InvoiceBook = () => {
 
                 {/* Financial */}
                 <div style={{ background:'#f8fafc', border:'1px solid #e8edf4', borderRadius:'10px', padding:'14px 16px' }}>
-                  <p style={{ fontSize:'0.75rem', fontWeight:'700', textTransform:'uppercase', letterSpacing:'0.06em', color:'#64748b', marginBottom:'12px', marginTop:0 }}>💰 Financial Breakdown</p>
+                  <p style={{ fontSize:'0.75rem', fontWeight:'700', textTransform:'uppercase', letterSpacing:'0.06em', color:'#64748b', marginBottom:'12px', marginTop:0 }}>Financial Breakdown</p>
                   <div className="form-grid">
                     <div className="form-group">
                       <label>Unit Type</label>
@@ -240,7 +240,7 @@ const InvoiceBook = () => {
                 <div className="modal-actions">
                   <button type="button" className="cancel-btn" onClick={() => setShowModal(false)}>Cancel</button>
                   <button type="submit" className="submit-btn" disabled={submitting}>
-                    {submitting ? 'Saving...' : '💾 Save Invoice'}
+                    {submitting ? 'Saving...' : 'Save Invoice'}
                   </button>
                 </div>
               </div>

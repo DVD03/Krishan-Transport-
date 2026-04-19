@@ -162,7 +162,7 @@ const QuotationBook = () => {
 
                 {/* Client Info */}
                 <div style={{ background:'#f8fafc', border:'1px solid #e8edf4', borderRadius:'10px', padding:'14px 16px', marginBottom:'12px' }}>
-                  <p style={{ fontSize:'0.75rem', fontWeight:'700', textTransform:'uppercase', letterSpacing:'0.06em', color:'#64748b', marginBottom:'12px', marginTop:0 }}>📋 Client Information</p>
+                  <p style={{ fontSize:'0.75rem', fontWeight:'700', textTransform:'uppercase', letterSpacing:'0.06em', color:'#64748b', marginBottom:'12px', marginTop:0 }}>Client Information</p>
                   <div className="form-grid">
                     <div className="form-group">
                       <label>Client Name *</label>
@@ -211,7 +211,7 @@ const QuotationBook = () => {
 
                 {/* Financial */}
                 <div style={{ background:'#f8fafc', border:'1px solid #e8edf4', borderRadius:'10px', padding:'14px 16px', marginBottom:'12px' }}>
-                  <p style={{ fontSize:'0.75rem', fontWeight:'700', textTransform:'uppercase', letterSpacing:'0.06em', color:'#64748b', marginBottom:'12px', marginTop:0 }}>💰 Pricing</p>
+                  <p style={{ fontSize:'0.75rem', fontWeight:'700', textTransform:'uppercase', letterSpacing:'0.06em', color:'#64748b', marginBottom:'12px', marginTop:0 }}>Pricing</p>
                   <div className="form-grid">
                     <div className="form-group">
                       <label>Mandatory / Min Charge (LKR)</label>
@@ -237,7 +237,7 @@ const QuotationBook = () => {
 
                 {/* Terms */}
                 <div style={{ background:'#f8fafc', border:'1px solid #e8edf4', borderRadius:'10px', padding:'14px 16px' }}>
-                  <p style={{ fontSize:'0.75rem', fontWeight:'700', textTransform:'uppercase', letterSpacing:'0.06em', color:'#64748b', marginBottom:'10px', marginTop:0 }}>📄 Terms & Conditions</p>
+                  <p style={{ fontSize:'0.75rem', fontWeight:'700', textTransform:'uppercase', letterSpacing:'0.06em', color:'#64748b', marginBottom:'10px', marginTop:0 }}>Terms & Conditions</p>
                   <div className="form-group">
                     <textarea name="termsAndConditions" value={fd.termsAndConditions} onChange={handleChange} rows={4} />
                   </div>
@@ -254,7 +254,7 @@ const QuotationBook = () => {
                 <div className="modal-actions">
                   <button type="button" className="cancel-btn" onClick={() => setShowModal(false)}>Cancel</button>
                   <button type="submit" className="submit-btn" disabled={submitting}>
-                    {submitting ? 'Saving...' : '💾 Save Quotation'}
+                    {submitting ? 'Saving...' : 'Save Quotation'}
                   </button>
                 </div>
               </div>

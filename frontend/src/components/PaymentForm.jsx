@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { vehicleAPI, clientAPI } from '../services/api';
+import { vehicleAPI, clientAPI, employeeAPI } from '../services/api';
 import '../styles/books.css';
 import '../styles/forms.css';
 
@@ -8,6 +8,7 @@ const defaultForm = () => ({
   client:        '',
   vehicle:       '',
   location:      '',
+  driverName:    '',
   startTime:     '',
   endTime:       '',
   restTime:      0,
@@ -24,9 +25,10 @@ const defaultForm = () => ({
 });
 
 const PaymentForm = ({ onSubmit, onCancel, initialData }) => {
-  const [vehicles, setVehicles] = useState([]);
-  const [clients, setClients]   = useState([]);
-  const [formData, setFormData] = useState(
+  const [vehicles, setVehicles]   = useState([]);
+  const [clients, setClients]     = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [formData, setFormData]   = useState(
     initialData
       ? { ...defaultForm(), ...initialData, date: initialData.date ? new Date(initialData.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0] }
       : defaultForm()
@@ -35,9 +37,14 @@ const PaymentForm = ({ onSubmit, onCancel, initialData }) => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [vehRes, cliRes] = await Promise.all([vehicleAPI.get(), clientAPI.get()]);
+        const [vehRes, cliRes, empRes] = await Promise.all([
+          vehicleAPI.get(), 
+          clientAPI.get(),
+          employeeAPI.get()
+        ]);
         setVehicles(Array.isArray(vehRes.data) ? vehRes.data : []);
         setClients(Array.isArray(cliRes.data)  ? cliRes.data  : []);
+        setEmployees(Array.isArray(empRes.data) ? empRes.data : []);
       } catch (err) { console.error(err); }
     };
     fetchData();
@@ -87,6 +94,8 @@ const PaymentForm = ({ onSubmit, onCancel, initialData }) => {
     onSubmit(formData);
   };
 
+  const driversList = employees.filter(emp => emp.role === 'Driver' || emp.role === 'Admin' || emp.role === 'Manager');
+
   const section = {
     background: '#f8fafc', border: '1px solid #e8edf4',
     borderRadius: '10px', padding: '14px 16px', marginBottom: '12px',
@@ -107,16 +116,26 @@ const PaymentForm = ({ onSubmit, onCancel, initialData }) => {
   return (
     <form onSubmit={handleSubmit} className="hire-form">
 
-      {/* ── SCROLLABLE CONTENT ── */}
+      {/* -- SCROLLABLE CONTENT -- */}
       <div className="hire-form-scroll">
 
-        {/* 📋 Basic Info */}
+        {/* Basic Info */}
         <div style={section}>
-          <p style={sectionTitle}>📋 Basic Information</p>
+          <p style={sectionTitle}>Basic Information</p>
           <div style={row}>
             <div style={grp}>
               <label style={lbl}>Date *</label>
               <input type="date" name="date" value={formData.date} onChange={handleChange} required style={inp()} />
+            </div>
+            <div style={grp}>
+              <label style={lbl}>Driver Name</label>
+              <select name="driverName" value={formData.driverName} onChange={handleChange} style={inp()}>
+                <option value="">Select Driver</option>
+                {driversList.map(emp => <option key={emp._id} value={emp.name}>{emp.name}</option>)}
+                {!driversList.find(d => d.name === formData.driverName) && formData.driverName && (
+                  <option value={formData.driverName}>{formData.driverName}</option>
+                )}
+              </select>
             </div>
           </div>
           <div style={{ ...row, marginTop: '10px' }}>
@@ -141,9 +160,9 @@ const PaymentForm = ({ onSubmit, onCancel, initialData }) => {
           </div>
         </div>
 
-        {/* ⏱ Time Tracking */}
+        {/* Time Tracking */}
         <div style={section}>
-          <p style={sectionTitle}>⏱ Time Tracking</p>
+          <p style={sectionTitle}>Time Tracking</p>
           <div style={row}>
             <div style={grp}>
               <label style={lbl}>Start Time</label>
@@ -158,23 +177,23 @@ const PaymentForm = ({ onSubmit, onCancel, initialData }) => {
               <input type="number" name="restTime" value={formData.restTime} onChange={handleChange} min="0" style={inp()} />
             </div>
             <div style={grp}>
-              <label style={{ ...lbl, color: '#2563eb' }}>Total Hours ⚡</label>
+              <label style={{ ...lbl, color: '#2563eb' }}>Total Hours (Auto)</label>
               <input type="number" name="totalHours" value={formData.totalHours} onChange={handleChange} step="0.01"
                 style={inp({ background: '#eff6ff', fontWeight: '700', color: '#1d4ed8' })} />
             </div>
           </div>
         </div>
 
-        {/* 💰 Payment Details */}
+        {/* Payment Details */}
         <div style={section}>
-          <p style={sectionTitle}>💰 Payment Breakdown</p>
+          <p style={sectionTitle}>Payment Breakdown</p>
           <div style={row}>
             <div style={grp}>
               <label style={lbl}>Minimum Hours</label>
               <input type="number" name="minimumHours" value={formData.minimumHours} onChange={handleChange} step="0.01" min="0" style={inp()} />
             </div>
             <div style={grp}>
-              <label style={{ ...lbl, color: '#b45309' }}>Hours in Bill ⚡</label>
+              <label style={{ ...lbl, color: '#b45309' }}>Hours in Bill (Auto)</label>
               <input type="number" name="hoursInBill" value={formData.hoursInBill} onChange={handleChange} step="0.01"
                 style={inp({ background: '#fefce8', fontWeight: '700', color: '#b45309' })} />
             </div>
@@ -203,12 +222,12 @@ const PaymentForm = ({ onSubmit, onCancel, initialData }) => {
           </div>
           <div style={{ ...row, marginTop: '10px' }}>
             <div style={grp}>
-              <label style={{ ...lbl, color: formData.balance > 0 ? '#dc2626' : '#16a34a' }}>Balance ⚡ (LKR)</label>
+              <label style={{ ...lbl, color: formData.balance > 0 ? '#dc2626' : '#16a34a' }}>Balance (LKR)</label>
               <input type="number" name="balance" value={formData.balance} readOnly
                 style={inp({ background: formData.balance > 0 ? '#fee2e2' : '#dcfce7', fontWeight: '800', color: formData.balance > 0 ? '#dc2626' : '#16a34a', cursor: 'default' })} />
             </div>
             <div style={grp}>
-              <label style={lbl}>Status ⚡</label>
+              <label style={lbl}>Status (Auto)</label>
               <input type="text" value={formData.status} readOnly
                 style={inp({ background: formData.status === 'Paid' ? '#dcfce7' : '#fefce8', fontWeight: '700', color: formData.status === 'Paid' ? '#15803d' : '#92400e', cursor: 'default' })} />
             </div>
@@ -217,7 +236,7 @@ const PaymentForm = ({ onSubmit, onCancel, initialData }) => {
 
       </div>{/* end hire-form-scroll */}
 
-      {/* ── STICKY FOOTER ── */}
+      {/* -- STICKY FOOTER -- */}
       <div className="hire-form-footer">
         <div className="total-display">
           <span>Balance</span>
@@ -228,7 +247,7 @@ const PaymentForm = ({ onSubmit, onCancel, initialData }) => {
         <div className="modal-actions">
           <button type="button" className="cancel-btn" onClick={onCancel}>Cancel</button>
           <button type="submit" className="submit-btn">
-            {initialData ? '✅ Update Payment' : '💾 Save Payment'}
+            {initialData ? 'Update Payment' : 'Save Payment'}
           </button>
         </div>
       </div>

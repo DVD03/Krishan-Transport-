@@ -102,6 +102,10 @@ const HireForm = ({ onSubmit, onCancel, initialData }) => {
     onSubmit(formData);
   };
 
+  // Drivers and Helpers lists for selectable dropdowns
+  const driversList = employees.filter(emp => emp.role === 'Driver' || emp.role === 'Admin' || emp.role === 'Manager');
+  const helpersList = employees.filter(emp => emp.role === 'Helper');
+
   const section = {
     background: '#f8fafc',
     border: '1px solid #e8edf4',
@@ -136,12 +140,12 @@ const HireForm = ({ onSubmit, onCancel, initialData }) => {
   return (
     <form onSubmit={handleSubmit} className="hire-form">
 
-      {/* ── SCROLLABLE CONTENT ── */}
+      {/* -- SCROLLABLE CONTENT -- */}
       <div className="hire-form-scroll">
 
-        {/* 📋 Basic Info */}
+        {/* Basic Info */}
         <div style={section}>
-          <p style={sectionTitle}>📋 Basic Information</p>
+          <p style={sectionTitle}>Basic Information</p>
           <div style={row}>
             <div style={grp}>
               <label style={lbl}>Date *</label>
@@ -178,24 +182,36 @@ const HireForm = ({ onSubmit, onCancel, initialData }) => {
           </div>
         </div>
 
-        {/* 👷 Personnel */}
+        {/* Personnel */}
         <div style={section}>
-          <p style={sectionTitle}>👷 Personnel</p>
+          <p style={sectionTitle}>Personnel</p>
           <div style={row}>
             <div style={grp}>
               <label style={lbl}>Driver Name</label>
-              <input type="text" name="driverName" value={formData.driverName} onChange={handleChange} placeholder="Driver's name" style={inp()} />
+              <select name="driverName" value={formData.driverName} onChange={handleChange} style={inp()}>
+                <option value="">Select Driver</option>
+                {driversList.map(emp => <option key={emp._id} value={emp.name}>{emp.name}</option>)}
+                {!driversList.find(d => d.name === formData.driverName) && formData.driverName && (
+                  <option value={formData.driverName}>{formData.driverName}</option>
+                )}
+              </select>
             </div>
             <div style={grp}>
               <label style={lbl}>Helper Name</label>
-              <input type="text" name="helperName" value={formData.helperName} onChange={handleChange} placeholder="Helper's name" style={inp()} />
+              <select name="helperName" value={formData.helperName} onChange={handleChange} style={inp()}>
+                <option value="">Select Helper</option>
+                {helpersList.map(emp => <option key={emp._id} value={emp.name}>{emp.name}</option>)}
+                {!helpersList.find(h => h.name === formData.helperName) && formData.helperName && (
+                  <option value={formData.helperName}>{formData.helperName}</option>
+                )}
+              </select>
             </div>
           </div>
         </div>
 
-        {/* ⏱ Time Tracking */}
+        {/* Time Tracking */}
         <div style={section}>
-          <p style={sectionTitle}>⏱ Time Tracking</p>
+          <p style={sectionTitle}>Time Tracking</p>
           <div style={row}>
             <div style={grp}>
               <label style={lbl}>Start Time</label>
@@ -210,16 +226,16 @@ const HireForm = ({ onSubmit, onCancel, initialData }) => {
               <input type="number" name="restTime" value={formData.restTime} onChange={handleChange} min="0" style={inp()} />
             </div>
             <div style={grp}>
-              <label style={{ ...lbl, color: '#2563eb' }}>Working Hours ⚡</label>
+              <label style={{ ...lbl, color: '#2563eb' }}>Working Hours (Auto)</label>
               <input type="number" name="workingHours" value={formData.workingHours} onChange={handleChange} step="0.01"
                 style={inp({ background: '#eff6ff', fontWeight: '700', color: '#1d4ed8' })} />
             </div>
           </div>
         </div>
 
-        {/* 💰 Billing Breakdown */}
+        {/* Billing Breakdown */}
         <div style={section}>
-          <p style={sectionTitle}>💰 Billing Breakdown (Auto-Calculated)</p>
+          <p style={sectionTitle}>Billing Breakdown (Auto-Calculated)</p>
           <div style={row}>
             <div style={grp}>
               <label style={lbl}>Min Hours</label>
@@ -230,7 +246,7 @@ const HireForm = ({ onSubmit, onCancel, initialData }) => {
               <input type="number" name="oneHourFee" value={formData.oneHourFee} onChange={handleChange} min="0" style={inp()} />
             </div>
             <div style={grp}>
-              <label style={{ ...lbl, color: '#b45309' }}>Extra Hours ⚡</label>
+              <label style={{ ...lbl, color: '#b45309' }}>Extra Hours (Auto)</label>
               <input type="number" name="extraHours" value={formData.extraHours} onChange={handleChange} step="0.01"
                 style={inp({ background: '#fefce8', fontWeight: '700', color: '#b45309' })} />
             </div>
@@ -255,21 +271,21 @@ const HireForm = ({ onSubmit, onCancel, initialData }) => {
           </div>
           <div style={{ ...row, marginTop: '10px' }}>
             <div style={grp}>
-              <label style={{ ...lbl, color: '#16a34a' }}>Bill Amount ⚡ (LKR)</label>
+              <label style={{ ...lbl, color: '#16a34a' }}>Bill Amount (LKR)</label>
               <input type="number" name="billAmount" value={formData.billAmount} readOnly
                 style={inp({ background: '#dcfce7', fontWeight: '700', color: '#15803d', cursor: 'default' })} />
             </div>
             <div style={grp}>
-              <label style={{ ...lbl, color: '#2563eb', fontSize: '0.8rem' }}>TOTAL AMOUNT ⚡ (LKR)</label>
+              <label style={{ ...lbl, color: '#2563eb', fontSize: '0.8rem' }}>TOTAL AMOUNT (LKR)</label>
               <input type="number" name="totalAmount" value={formData.totalAmount} readOnly
                 style={inp({ background: '#dbeafe', fontWeight: '800', fontSize: '1rem', color: '#1d4ed8', cursor: 'default' })} />
             </div>
           </div>
         </div>
 
-        {/* 📝 Details */}
+        {/* Details */}
         <div style={section}>
-          <p style={sectionTitle}>📝 Additional Details</p>
+          <p style={sectionTitle}>Additional Details</p>
           <div style={grp}>
             <label style={lbl}>Details / Remarks</label>
             <textarea name="details" value={formData.details} onChange={handleChange} rows="3"
@@ -286,7 +302,7 @@ const HireForm = ({ onSubmit, onCancel, initialData }) => {
 
       </div>{/* end hire-form-scroll */}
 
-      {/* ── STICKY FOOTER (always visible) ── */}
+      {/* -- STICKY FOOTER (always visible) -- */}
       <div className="hire-form-footer">
         <div className="total-display">
           <span>Total Amount</span>
@@ -295,7 +311,7 @@ const HireForm = ({ onSubmit, onCancel, initialData }) => {
         <div className="modal-actions">
           <button type="button" className="cancel-btn" onClick={onCancel}>Cancel</button>
           <button type="submit" className="submit-btn">
-            {initialData ? '✅ Update Job' : '💾 Save Job'}
+            {initialData ? 'Update Job' : 'Save Job'}
           </button>
         </div>
       </div>

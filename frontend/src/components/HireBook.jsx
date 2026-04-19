@@ -24,8 +24,8 @@ const HireBook = () => {
   const [searchQuery, setSearchQuery] = React.useState('');
 
   const columns = canManage
-    ? ['DATE', 'BILL#', 'COMPANY', 'VEHICLE', 'LOCATION', 'DRIVER', 'HOURS', 'BILL AMT', 'TOTAL', 'STATUS', 'ACTION']
-    : ['DATE', 'BILL#', 'COMPANY', 'VEHICLE', 'LOCATION', 'DRIVER', 'HOURS', 'BILL AMT', 'TOTAL', 'STATUS'];
+    ? ['DATE', 'BILL#', 'TS#', 'COMPANY', 'VEHICLE', 'LOCATION', 'DRIVER', 'HELPER', 'START', 'END', 'HOURS', 'MIN HRS', 'BILL AMT', 'D COST', 'COMM', 'TOTAL', 'REMARKS', 'STATUS', 'ACTION']
+    : ['DATE', 'BILL#', 'TS#', 'COMPANY', 'VEHICLE', 'LOCATION', 'DRIVER', 'HELPER', 'START', 'END', 'HOURS', 'MIN HRS', 'BILL AMT', 'D COST', 'COMM', 'TOTAL', 'REMARKS', 'STATUS'];
   
   React.useEffect(() => {
     fetchRecords();
@@ -48,16 +48,24 @@ const HireBook = () => {
         ...item,
         date:       new Date(item.date).toLocaleDateString(),
         billNumber: item.billNumber || '—',
+        timeSheetNumber: item.timeSheetNumber || '—',
         client:     item.client || '—',
         vehicle:    item.vehicle || '—',
         location:   item.location || '—',
         driverName: item.driverName || '—',
+        helperName: item.helperName || '—',
+        startTime:  item.startTime  || '—',
+        endTime:    item.endTime    || '—',
         workingHours: item.workingHours ? `${item.workingHours}h` : '—',
+        minimumHours: item.minimumHours ? `${item.minimumHours}h` : '—',
+        dieselCost: `LKR ${(item.dieselCost || 0).toLocaleString()}`,
+        commission: `LKR ${(item.commission || 0).toLocaleString()}`,
         billAmount_val: item.billAmount || 0,
         totalAmount_val: item.totalAmount || 0,
         billAmount: `LKR ${(item.billAmount || 0).toLocaleString()}`,
         totalAmount_disp: `LKR ${(item.totalAmount || 0).toLocaleString()}`,
-        status: item.status || 'Pending',
+        details:    item.details || '—',
+        status:     item.status  || 'Pending',
         action: canManage ? (
           <div className="table-actions">
             <button className="edit-btn" onClick={() => handleEdit(item)}>Edit</button>
@@ -68,7 +76,7 @@ const HireBook = () => {
       setHireRecords(formatted);
       setError(null);
     } catch (err) {
-      setError('Connection issue: using local hire records.');
+      setError('Connection issue: could not load hire records.');
     } finally {
       setLoading(false);
     }
@@ -80,7 +88,9 @@ const HireBook = () => {
       const matchSearch = !searchQuery || 
         r.client?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         r.location?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        r.billNumber?.toLowerCase().includes(searchQuery.toLowerCase());
+        r.billNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        r.timeSheetNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        r.driverName?.toLowerCase().includes(searchQuery.toLowerCase());
       return matchVehicle && matchSearch;
     });
   }, [hireRecords, selectedVehicle, searchQuery]);
@@ -131,14 +141,16 @@ const HireBook = () => {
   };
 
   const handleExportPDF = () => {
-    const exportColumns = ['DATE', 'BILL#', 'COMPANY', 'VEHICLE', 'LOCATION', 'DRIVER', 'HOURS', 'BILL AMT', 'TOTAL'];
+    const exportColumns = ['DATE', 'BILL#', 'TS#', 'COMPANY', 'VEHICLE', 'LOCATION', 'DRIVER', 'HELPER', 'HOURS', 'BILL AMT', 'TOTAL'];
     const exportData = filteredRecords.map(r => [
       r.date || '—',
       r.billNumber || '—',
+      r.timeSheetNumber || '—',
       r.client || '—',
       r.vehicle || '—',
       r.location || '—',
       r.driverName || '—',
+      r.helperName || '—',
       r.workingHours || '—',
       r.billAmount || '—',
       r.totalAmount_disp || '—'
@@ -178,7 +190,7 @@ const HireBook = () => {
         <div className="search-box">
           <input 
             type="text" 
-            placeholder="Search client, bill, location..." 
+            placeholder="Search client, bill, TS#, location..." 
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
           />
