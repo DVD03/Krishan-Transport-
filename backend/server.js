@@ -49,14 +49,14 @@ if (!process.env.MONGODB_URI) {
 }
 
 // Routes
-app.use('/api/diesel', require('./routes/diesel'));
-app.use('/api/hires', require('./routes/hires'));
-app.use('/api/salaries', require('./routes/salaries'));
-app.use('/api/payments', require('./routes/payments'));
-app.use('/api/clients', require('./routes/clients'));
-app.use('/api/vehicles', require('./routes/vehicles'));
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/employees', require('./routes/employees'));
+app.use('/diesel', require('./routes/diesel'));
+app.use('/hires', require('./routes/hires'));
+app.use('/salaries', require('./routes/salaries'));
+app.use('/payments', require('./routes/payments'));
+app.use('/clients', require('./routes/clients'));
+app.use('/vehicles', require('./routes/vehicles'));
+app.use('/auth', require('./routes/auth'));
+app.use('/employees', require('./routes/employees'));
 
 app.get('/', (req, res) => {
   res.send('Krishan Transport API is running...');
