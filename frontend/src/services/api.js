@@ -1,7 +1,25 @@
 import axios from 'axios';
 
 const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-const API_URL = import.meta.env.VITE_API_URL || (isLocal ? 'http://localhost:5000/api' : 'https://krishan-transport-1.onrender.com/api');
+const rawApiUrl = import.meta.env.VITE_API_URL || (isLocal ? 'http://localhost:5000/api' : 'https://krishan-transport-1.onrender.com/api');
+
+const normalizeApiUrl = (url) => {
+  const trimmed = (url || '').trim().replace(/\/+$/, '');
+  if (!trimmed) return trimmed;
+
+  if (trimmed.toLowerCase().endsWith('/api')) {
+    return trimmed;
+  }
+
+  // In production, force API base path to prevent Netlify env misconfiguration.
+  if (!isLocal) {
+    return `${trimmed}/api`;
+  }
+
+  return trimmed;
+};
+
+const API_URL = normalizeApiUrl(rawApiUrl);
 
 const api = axios.create({
   baseURL: API_URL,
