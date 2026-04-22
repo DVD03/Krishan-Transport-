@@ -1,247 +1,292 @@
 import React, { useState, useEffect } from 'react';
-import { vehicleAPI, clientAPI, employeeAPI } from '../services/api';
+import { vehicleAPI, clientAPI, paymentAPI } from '../services/api';
 import '../styles/books.css';
 import '../styles/forms.css';
 
-const defaultForm = () => ({
-  date:          new Date().toISOString().split('T')[0],
-  client:        '',
-  vehicle:       '',
-  location:      '',
-  driverName:    '',
-  startTime:     '',
-  endTime:       '',
-  restTime:      0,
-  totalHours:    0,
-  minimumHours:  0,
-  hoursInBill:   0,
-  commission:    0,
-  dayPayment:    0,
-  takenAmount:   0,
-  hireAmount:    0,
-  paidAmount:    0,
-  balance:       0,
-  status:        'Pending'
+/* ─── Helpers ──────────────────────────────────────────────── */
+const blank = () => ({
+  date:         new Date().toISOString().split('T')[0],
+  client:       '',
+  vehicle:      '',
+  location:     '',
+  startTime:    '',
+  endTime:      '',
+  restTime:     0,
+  totalHours:   0,
+  minimumHours: 0,
+  hoursInBill:  0,
+  hireAmount:   0,
+  commission:   0,
+  dayPayment:   0,
+  takenAmount:  0,
+  paidAmount:   0,
+  balance:      0,
+  status:       'Pending',
 });
 
-const PaymentForm = ({ onSubmit, onCancel, initialData }) => {
-  const [vehicles, setVehicles]   = useState([]);
-  const [clients, setClients]     = useState([]);
-  const [employees, setEmployees] = useState([]);
-  const [formData, setFormData]   = useState(
-    initialData
-      ? { ...defaultForm(), ...initialData, date: initialData.date ? new Date(initialData.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0] }
-      : defaultForm()
-  );
+const fromDB = (d) => ({
+  ...blank(),
+  ...d,
+  date:       d?.date ? new Date(d.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+  restTime:   d?.restTime   ?? 0,
+  totalHours: d?.totalHours ?? 0,
+  minimumHours: d?.minimumHours ?? 0,
+  hoursInBill:  d?.hoursInBill  ?? 0,
+  hireAmount:   d?.hireAmount   ?? 0,
+  commission:   d?.commission   ?? 0,
+  dayPayment:   d?.dayPayment   ?? 0,
+  takenAmount:  d?.takenAmount  ?? 0,
+  balance:      d?.balance      ?? 0,
+});
 
+/* Auto-calculate hours & balance — does NOT touch status */
+const compute = (f) => {
+  const next = { ...f };
+
+  // Total hours from start/end/rest
+  if (next.startTime && next.endTime) {
+    const [sh, sm] = next.startTime.split(':').map(Number);
+    const [eh, em] = next.endTime.split(':').map(Number);
+    let mins = (eh * 60 + em) - (sh * 60 + sm);
+    if (mins < 0) mins += 1440; // overnight
+    mins = Math.max(0, mins - (parseFloat(next.restTime) || 0));
+    next.totalHours = +(mins / 60).toFixed(2);
+  }
+
+  // Hours in bill = total - minimum
+  const th = parseFloat(next.totalHours)   || 0;
+  const mh = parseFloat(next.minimumHours) || 0;
+  next.hoursInBill = Math.max(0, +(th - mh).toFixed(2));
+
+  // Balance = hire - commission - dayPayment - takenAmount
+  const hire   = parseFloat(next.hireAmount)  || 0;
+  const comm   = parseFloat(next.commission)  || 0;
+  const dayPay = parseFloat(next.dayPayment)  || 0;
+  const taken  = parseFloat(next.takenAmount) || 0;
+  next.balance = +(hire - comm - dayPay - taken).toFixed(2);
+
+  // ⚠️ Status is NOT auto-set here — user controls it manually via dropdown
+
+  return next;
+};
+
+/* Suggested status based on balance (for hint only, not forced) */
+const suggestStatus = (f) => {
+  const hire = parseFloat(f.hireAmount) || 0;
+  return hire > 0 && (parseFloat(f.balance) || 0) <= 0 ? 'Paid' : 'Pending';
+};
+
+/* ─── Component ─────────────────────────────────────────────── */
+const PaymentForm = ({ onSubmit, onCancel, initialData }) => {
+  /* Reference data */
+  const [vehicles,  setVehicles]  = useState([]);
+  const [clients,   setClients]   = useState([]);
+  const [prevJobs,  setPrevJobs]  = useState([]); // for auto-fill
+
+  /* Form state */
+  const [form, setForm] = useState(initialData ? fromDB(initialData) : blank());
+
+  /* Re-sync when switching edit targets */
   useEffect(() => {
-    const fetchData = async () => {
+    setForm(initialData ? fromDB(initialData) : blank());
+  }, [initialData]);
+
+  /* Load reference data */
+  useEffect(() => {
+    const load = async () => {
       try {
-        const [vehRes, cliRes, empRes] = await Promise.all([
-          vehicleAPI.get(), 
+        const [vR, cR, pR] = await Promise.all([
+          vehicleAPI.get(),
           clientAPI.get(),
-          employeeAPI.get()
+          paymentAPI.get(),
         ]);
-        setVehicles(Array.isArray(vehRes.data) ? vehRes.data : []);
-        setClients(Array.isArray(cliRes.data)  ? cliRes.data  : []);
-        setEmployees(Array.isArray(empRes.data) ? empRes.data : []);
-      } catch (err) { console.error(err); }
+
+        setVehicles(Array.isArray(vR.data) ? vR.data : []);
+        setClients (Array.isArray(cR.data) ? cR.data : []);
+        setPrevJobs(Array.isArray(pR.data) ? pR.data : []);
+      } catch (err) {
+        console.error('PaymentForm load error:', err);
+      }
     };
-    fetchData();
+    load();
   }, []);
 
+  /* Handle any field change */
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => {
-      const updated = { ...prev, [name]: value };
 
-      // Auto-calc total hours from start/end/rest
-      if (['startTime', 'endTime', 'restTime'].includes(name)) {
-        const start = name === 'startTime' ? value : updated.startTime;
-        const end   = name === 'endTime'   ? value : updated.endTime;
-        const rest  = parseFloat(name === 'restTime' ? value : updated.restTime) || 0;
-        if (start && end) {
-          const [sh, sm] = start.split(':').map(Number);
-          const [eh, em] = end.split(':').map(Number);
-          let totalMins = (eh * 60 + em) - (sh * 60 + sm);
-          if (totalMins < 0) totalMins += 1440;
-          totalMins -= rest;
-          updated.totalHours = Math.max(0, +(totalMins / 60).toFixed(2));
+    setForm(prev => {
+      const next = { ...prev, [name]: value };
+
+      /* Smart auto-fill on vehicle select (only in Add mode) */
+      if (name === 'vehicle' && value && !initialData) {
+        const last = prevJobs
+          .filter(j => j.vehicle === value)
+          .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+        if (last) {
+          // no driver/helper autofill
         }
       }
 
-      // Auto-calc hours in bill = total - minimum
-      if (['totalHours', 'minimumHours'].includes(name)) {
-        const th = parseFloat(name === 'totalHours'   ? value : updated.totalHours)   || 0;
-        const mh = parseFloat(name === 'minimumHours' ? value : updated.minimumHours) || 0;
-        updated.hoursInBill = Math.max(0, +(th - mh).toFixed(2));
+      /* Smart auto-fill on client select (only in Add mode) */
+      if (name === 'client' && value && !initialData) {
+        const last = prevJobs
+          .filter(j => j.client === value)
+          .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+        if (last) {
+          if (!prev.location)     next.location     = last.location     || '';
+          if (!prev.minimumHours) next.minimumHours = last.minimumHours || 0;
+        }
       }
 
-      // Auto-calc balance = hireAmount - commission - dayPayment - takenAmount
-      const hire   = parseFloat(updated.hireAmount)  || 0;
-      const comm   = parseFloat(updated.commission)  || 0;
-      const dayPay = parseFloat(updated.dayPayment)  || 0;
-      const taken  = parseFloat(updated.takenAmount) || 0;
-      updated.balance = +(hire - comm - dayPay - taken).toFixed(2);
-      updated.status  = updated.balance <= 0 ? 'Paid' : 'Pending';
-
-      return updated;
+      return compute(next);
     });
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(formData);
+    onSubmit({ ...form });
   };
 
-  const driversList = employees.filter(emp => emp.role === 'Driver' || emp.role === 'Admin' || emp.role === 'Manager');
-
-  const section = {
-    background: '#f8fafc', border: '1px solid #e8edf4',
-    borderRadius: '10px', padding: '14px 16px', marginBottom: '12px',
-  };
-  const sectionTitle = {
-    fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase',
-    letterSpacing: '0.06em', color: '#64748b', marginBottom: '12px', marginTop: 0,
-  };
-  const row = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px' };
-  const grp = { display: 'flex', flexDirection: 'column', gap: '4px' };
-  const lbl = { fontSize: '0.77rem', fontWeight: '600', color: '#475569' };
-  const inp = (extra = {}) => ({
-    padding: '8px 10px', border: '1.5px solid #e2e8f0', borderRadius: '7px',
-    fontSize: '0.86rem', fontFamily: 'inherit', width: '100%',
-    boxSizing: 'border-box', ...extra,
-  });
-
+  /* ── Render ─────────────────────────────────────────────── */
   return (
     <form onSubmit={handleSubmit} className="hire-form">
-
-      {/* -- SCROLLABLE CONTENT -- */}
       <div className="hire-form-scroll">
 
-        {/* Basic Info */}
-        <div style={section}>
-          <p style={sectionTitle}>Basic Information</p>
-          <div style={row}>
-            <div style={grp}>
-              <label style={lbl}>Date *</label>
-              <input type="date" name="date" value={formData.date} onChange={handleChange} required style={inp()} />
+        {/* ── Section 1: Logistics ─────────────────────── */}
+        <div className="form-section">
+          <p className="form-section-title">Logistics Information</p>
+          <div className="form-grid">
+
+            <div className="form-group">
+              <label>Date *</label>
+              <input type="date" name="date" value={form.date} onChange={handleChange} required />
             </div>
-            <div style={grp}>
-              <label style={lbl}>Driver Name</label>
-              <select name="driverName" value={formData.driverName} onChange={handleChange} style={inp()}>
-                <option value="">Select Driver</option>
-                {driversList.map(emp => <option key={emp._id} value={emp.name}>{emp.name}</option>)}
-                {!driversList.find(d => d.name === formData.driverName) && formData.driverName && (
-                  <option value={formData.driverName}>{formData.driverName}</option>
-                )}
-              </select>
-            </div>
-          </div>
-          <div style={{ ...row, marginTop: '10px' }}>
-            <div style={grp}>
-              <label style={lbl}>Company Name *</label>
-              <select name="client" value={formData.client} onChange={handleChange} required style={inp()}>
-                <option value="">Select Client</option>
+
+            <div className="form-group">
+              <label>Company Name *</label>
+              <select name="client" value={form.client} onChange={handleChange} required>
+                <option value="">— Select Client —</option>
                 {clients.map(c => <option key={c._id} value={c.name}>{c.name}</option>)}
               </select>
             </div>
-            <div style={grp}>
-              <label style={lbl}>Vehicle Number</label>
-              <select name="vehicle" value={formData.vehicle} onChange={handleChange} style={inp()}>
-                <option value="">Select Vehicle</option>
+
+            <div className="form-group">
+              <label>Vehicle Number</label>
+              <select name="vehicle" value={form.vehicle} onChange={handleChange}>
+                <option value="">— Select Vehicle —</option>
                 {vehicles.map(v => <option key={v._id} value={v.number}>{v.number}</option>)}
               </select>
             </div>
-            <div style={grp}>
-              <label style={lbl}>Location / Site</label>
-              <input type="text" name="location" value={formData.location} onChange={handleChange} placeholder="e.g. Colombo" style={inp()} />
+
+            <div className="form-group">
+              <label>Location / Site</label>
+              <input type="text" name="location" value={form.location} onChange={handleChange} placeholder="e.g. Colombo" />
             </div>
+
           </div>
         </div>
 
-        {/* Time Tracking */}
-        <div style={section}>
-          <p style={sectionTitle}>Time Tracking</p>
-          <div style={row}>
-            <div style={grp}>
-              <label style={lbl}>Start Time</label>
-              <input type="time" name="startTime" value={formData.startTime} onChange={handleChange} style={inp()} />
+        {/* ── Section 2: Time Tracking ─────────────────── */}
+        <div className="form-section">
+          <p className="form-section-title">Time Tracking</p>
+          <div className="form-grid">
+
+            <div className="form-group">
+              <label>Start Time</label>
+              <input type="time" name="startTime" value={form.startTime} onChange={handleChange} />
             </div>
-            <div style={grp}>
-              <label style={lbl}>End Time</label>
-              <input type="time" name="endTime" value={formData.endTime} onChange={handleChange} style={inp()} />
+
+            <div className="form-group">
+              <label>End Time</label>
+              <input type="time" name="endTime" value={form.endTime} onChange={handleChange} />
             </div>
-            <div style={grp}>
-              <label style={lbl}>Rest Time (min)</label>
-              <input type="number" name="restTime" value={formData.restTime} onChange={handleChange} min="0" style={inp()} />
+
+            <div className="form-group">
+              <label>Rest Time (min)</label>
+              <input type="number" name="restTime" value={form.restTime} onChange={handleChange} min="0" />
             </div>
-            <div style={grp}>
-              <label style={{ ...lbl, color: '#2563eb' }}>Total Hours (Auto)</label>
-              <input type="number" name="totalHours" value={formData.totalHours} onChange={handleChange} step="0.01"
-                style={inp({ background: '#eff6ff', fontWeight: '700', color: '#1d4ed8' })} />
+
+            <div className="form-group">
+              <label>Total Hours <span style={{color:'#2563EB',fontSize:'11px'}}>(auto)</span></label>
+              <input type="number" value={form.totalHours} readOnly className="input-highlight-blue" />
             </div>
+
+            <div className="form-group">
+              <label>Minimum Hours</label>
+              <input type="number" name="minimumHours" value={form.minimumHours} onChange={handleChange} step="0.5" min="0" />
+            </div>
+
+            <div className="form-group">
+              <label>Hours in Bill <span style={{color:'#D97706',fontSize:'11px'}}>(auto)</span></label>
+              <input type="number" value={form.hoursInBill} readOnly className="input-highlight-gold" />
+            </div>
+
           </div>
         </div>
 
-        {/* Payment Details */}
-        <div style={section}>
-          <p style={sectionTitle}>Payment Breakdown</p>
-          <div style={row}>
-            <div style={grp}>
-              <label style={lbl}>Minimum Hours</label>
-              <input type="number" name="minimumHours" value={formData.minimumHours} onChange={handleChange} step="0.01" min="0" style={inp()} />
+        {/* ── Section 3: Payment Breakdown ─────────────── */}
+        <div className="form-section">
+          <p className="form-section-title">Payment Breakdown</p>
+          <div className="form-grid">
+
+            <div className="form-group">
+              <label>Hire Amount (LKR) *</label>
+              <input type="number" name="hireAmount" value={form.hireAmount} onChange={handleChange} min="0" required />
             </div>
-            <div style={grp}>
-              <label style={{ ...lbl, color: '#b45309' }}>Hours in Bill (Auto)</label>
-              <input type="number" name="hoursInBill" value={formData.hoursInBill} onChange={handleChange} step="0.01"
-                style={inp({ background: '#fefce8', fontWeight: '700', color: '#b45309' })} />
+
+            <div className="form-group">
+              <label>Commission (LKR)</label>
+              <input type="number" name="commission" value={form.commission} onChange={handleChange} min="0" />
             </div>
-            <div style={grp}>
-              <label style={lbl}>Hire Amount (LKR) *</label>
-              <input type="number" name="hireAmount" value={formData.hireAmount} onChange={handleChange} min="0" required style={inp()} />
+
+            <div className="form-group">
+              <label>Day Payment (LKR)</label>
+              <input type="number" name="dayPayment" value={form.dayPayment} onChange={handleChange} min="0" />
             </div>
-          </div>
-          <div style={{ ...row, marginTop: '10px' }}>
-            <div style={grp}>
-              <label style={lbl}>Commission (LKR)</label>
-              <input type="number" name="commission" value={formData.commission} onChange={handleChange} min="0" style={inp()} />
+
+            <div className="form-group">
+              <label>Taken Amount (LKR)</label>
+              <input type="number" name="takenAmount" value={form.takenAmount} onChange={handleChange} min="0" />
             </div>
-            <div style={grp}>
-              <label style={lbl}>Day Payment (LKR)</label>
-              <input type="number" name="dayPayment" value={formData.dayPayment} onChange={handleChange} min="0" style={inp()} />
+
+            <div className="form-group">
+              <label>Balance (LKR) <span style={{color:'#D97706',fontSize:'11px'}}>(auto)</span></label>
+              <input type="number" value={form.balance} readOnly
+                className={form.balance > 0 ? 'input-highlight-gold' : 'input-highlight-green'} />
             </div>
-            <div style={grp}>
-              <label style={lbl}>Taken Amount (LKR)</label>
-              <input type="number" name="takenAmount" value={formData.takenAmount} onChange={handleChange} min="0" style={inp()} />
+
+            <div className="form-group">
+              <label>
+                Payment Status
+                {suggestStatus(form) !== form.status && (
+                  <span style={{ marginLeft: '8px', fontSize: '11px', color: '#2563EB', fontWeight: '500' }}>
+                    ↑ Suggest: {suggestStatus(form)}
+                  </span>
+                )}
+              </label>
+              <select name="status" value={form.status} onChange={handleChange}
+                className={form.status === 'Paid' ? 'input-highlight-green' : 'input-highlight-gold'}>
+                <option value="Pending">Pending</option>
+                <option value="Paid">Paid</option>
+                <option value="Partial">Partial</option>
+              </select>
             </div>
-            <div style={grp}>
-              <label style={lbl}>Paid Amount (LKR)</label>
-              <input type="number" name="paidAmount" value={formData.paidAmount} onChange={handleChange} min="0" style={inp()} />
-            </div>
-          </div>
-          <div style={{ ...row, marginTop: '10px' }}>
-            <div style={grp}>
-              <label style={{ ...lbl, color: formData.balance > 0 ? '#dc2626' : '#16a34a' }}>Balance (LKR)</label>
-              <input type="number" name="balance" value={formData.balance} readOnly
-                style={inp({ background: formData.balance > 0 ? '#fee2e2' : '#dcfce7', fontWeight: '800', color: formData.balance > 0 ? '#dc2626' : '#16a34a', cursor: 'default' })} />
-            </div>
-            <div style={grp}>
-              <label style={lbl}>Status (Auto)</label>
-              <input type="text" value={formData.status} readOnly
-                style={inp({ background: formData.status === 'Paid' ? '#dcfce7' : '#fefce8', fontWeight: '700', color: formData.status === 'Paid' ? '#15803d' : '#92400e', cursor: 'default' })} />
-            </div>
+
           </div>
         </div>
 
-      </div>{/* end hire-form-scroll */}
+      </div>
 
-      {/* -- STICKY FOOTER -- */}
+      {/* ── Sticky Footer ────────────────────────────────── */}
       <div className="hire-form-footer">
         <div className="total-display">
+          <span>Hire Amount</span>
+          <strong style={{ color: '#1E40AF' }}>LKR {Number(form.hireAmount || 0).toLocaleString()}</strong>
+          <span style={{ margin: '0 12px', color: '#94A3B8' }}>|</span>
           <span>Balance</span>
-          <strong style={{ color: formData.balance > 0 ? '#dc2626' : '#16a34a' }}>
-            LKR {Number(formData.balance).toLocaleString()}
+          <strong style={{ color: form.balance > 0 ? '#DC2626' : '#059669' }}>
+            LKR {Number(form.balance).toLocaleString()}
           </strong>
         </div>
         <div className="modal-actions">
@@ -251,7 +296,6 @@ const PaymentForm = ({ onSubmit, onCancel, initialData }) => {
           </button>
         </div>
       </div>
-
     </form>
   );
 };

@@ -9,8 +9,9 @@ import '../styles/forms.css';
 import '../styles/books.css';
 
 const Clients = () => {
+  const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
   const userRole = localStorage.getItem('kt_user_role');
-  const canManage = ['Admin', 'Manager'].includes(userRole);
+  const canManage = isDev || ['Admin', 'Manager'].includes(userRole);
 
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [clientRecords, setClientRecords] = React.useState([]);
@@ -33,11 +34,16 @@ const Clients = () => {
       const response = await clientAPI.get();
       const formatted = (response.data || []).map(item => ({
         ...item,
+        rawData: item, // Store original for Editing
         name: item.name || '—',
         contact: item.contact || '—',
         outstanding_val: item.outstanding || 0,
         outstanding: `LKR ${(item.outstanding || 0).toLocaleString()}`,
-        status: item.status || 'Active',
+        status_disp: (
+          <span className={`status-badge ${item.status === 'Active' ? 'status-active' : 'status-inactive'}`}>
+            {item.status || 'Active'}
+          </span>
+        ),
         action: canManage ? (
           <div className="table-actions">
             <button className="edit-btn" onClick={() => handleEdit(item)}>Edit</button>
@@ -79,7 +85,8 @@ const Clients = () => {
   };
 
   const handleEdit = (item) => {
-    setEditingItem(item);
+    const target = item.rawData || item;
+    setEditingItem(target);
     setIsModalOpen(true);
   };
 

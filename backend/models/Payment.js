@@ -6,6 +6,9 @@ const PaymentSchema = new mongoose.Schema({
   client:         { type: String, required: true },
   vehicle:        { type: String },
   location:       { type: String },
+  driverName:     { type: String },
+  helperName:     { type: String },
+  employee:       { type: String }, // Fallback
   
   // Time Information
   startTime:      { type: String },
@@ -24,7 +27,7 @@ const PaymentSchema = new mongoose.Schema({
   hireAmount:     { type: Number, default: 0 },
   paidAmount:     { type: Number, default: 0 },
   balance:        { type: Number, default: 0 },
-  status:         { type: String, enum: ['Pending', 'Paid'], default: 'Pending' }
+  status:         { type: String, enum: ['Pending', 'Paid', 'Partial'], default: 'Pending' }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Payment', PaymentSchema);

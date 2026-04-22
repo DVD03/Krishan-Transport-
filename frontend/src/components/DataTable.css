@@ -1,144 +1,106 @@
-.table-container {
-  width: 100%;
-  overflow: hidden; /* Changed from x to hidden to use responsive table inside */
-  background-color: white;
-  border-radius: var(--radius);
+/* ═══════════════════════════════════════════
+   DATA TABLE — Professional, Compact Grid
+   ═══════════════════════════════════════════ */
+
+.table-wrapper {
+  background: var(--bg-card);
   border: 1px solid var(--border);
-  box-shadow: var(--shadow-sm);
-  margin-top: 10px;
+  border-radius: var(--r-lg);
+  box-shadow: var(--s-xs);
+  overflow: hidden;
+  margin-top: 12px;
 }
 
-.custom-table-wrapper {
-    width: 100%;
-    overflow-x: auto;
-}
-
-.custom-table {
+.data-table-root {
   width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-  min-width: 800px; /* Ensure table doesn't get too cramped */
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  background-image: 
+    linear-gradient(to right, white, white),
+    linear-gradient(to right, white, white),
+    linear-gradient(to right, rgba(0,0,0,.08), rgba(255,255,255,0)),
+    linear-gradient(to left, rgba(0,0,0,.08), rgba(255,255,255,0));
+  background-position: left center, right center, left center, right center;
+  background-repeat: no-repeat;
+  background-color: white;
+  background-size: 20px 100%, 20px 100%, 10px 100%, 10px 100%;
+  background-attachment: local, local, scroll, scroll;
 }
 
-.custom-table th {
-  padding: 14px 20px;
-  background-color: #F8FAFC;
-  color: #64748B;
-  font-size: 0.72rem;
+.data-table {
+  width: 100%;
+  min-width: 820px;
+  border-collapse: collapse;
+  font-size: 0.83rem;
+  text-align: left;
+}
+
+@media (max-width: 768px) {
+  .data-table {
+    min-width: 600px; /* Allow tables to be a bit narrower on mobile if columns allow */
+    font-size: 0.78rem;
+  }
+  .data-table th, .data-table td {
+    padding: 8px 12px;
+  }
+}
+
+/* ── Header ── */
+.data-table thead tr {
+  background: var(--bg-muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.data-table th {
+  padding: 11px 16px;
+  color: var(--text-300);
+  font-size: 0.68rem;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border-bottom: 1.5px solid var(--border);
+  letter-spacing: 1px;
   white-space: nowrap;
 }
 
-.custom-table td {
-  padding: 16px 20px;
-  color: var(--text-main);
-  font-size: 0.88rem;
-  border-bottom: 1px solid #F1F5F9;
+/* ── Rows ── */
+.data-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-sm);
+  color: var(--text-700);
+  vertical-align: middle;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
 }
 
-.custom-table tr:last-child td {
-  border-bottom: none;
-}
+.data-table tbody tr:last-child td { border-bottom: none; }
 
-.custom-table tr:hover td {
-  background-color: #F9FAFB;
-}
+.data-table tbody tr { transition: background 0.12s ease; }
 
-.clickable-row {
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
+.clickable-row { cursor: pointer; }
+.clickable-row:hover td { background: #F8FAFF; }
 
-.clickable-row:hover td {
-    background-color: #F1F5F9 !important;
-}
+/* ── Status Badges (scoped) ── */
+.status-badge    { white-space: nowrap; }
 
-.empty-row {
-  padding: 100px 0 !important;
-  text-align: center;
-}
+/* ── Actions ── */
+.table-actions { display: flex; gap: 6px; align-items: center; white-space: nowrap; }
+
+/* ── Empty / Loading ── */
+.empty-row { padding: 64px 0 !important; text-align: center !important; }
 
 .empty-content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 16px;
-  color: var(--text-secondary);
+  gap: 8px;
+  color: var(--text-300);
 }
 
-.empty-icon {
-  font-size: 3rem;
-  opacity: 0.5;
-}
+.empty-content p { font-size: 0.85rem; }
 
-.loading-cell { padding: 60px 0 !important; }
+.loading-cell { padding: 40px !important; text-align: center !important; }
 
-/* ── Shimmer Loader ── */
-.shimmer-loader {
-  width: 100%;
-  height: 200px;
-  background: linear-gradient(90deg, #f0f2f5 25%, #f7f9fa 50%, #f0f2f5 75%);
-  background-size: 200% 100%;
-  animation: loading 1.5s infinite;
-  border-radius: 8px;
-}
-
-@keyframes loading {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-.table-actions {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.edit-btn, .delete-btn {
-  padding: 6px 14px;
-  border-radius: 8px;
-  font-size: 0.82rem;
-  font-weight: 700;
-  cursor: pointer;
-  border: 1.5px solid transparent;
-  transition: all 0.2s;
-  font-family: inherit;
-}
-
-.edit-btn {
-  background-color: transparent;
-  color: var(--primary);
-  border-color: #DBEAFE;
-}
-
-.edit-btn:hover {
-  background-color: var(--primary);
-  color: white;
-  border-color: var(--primary);
-}
-
-.delete-btn {
-  background-color: transparent;
-  color: #EF4444;
-  border-color: #FEE2E2;
-}
-
-.delete-btn:hover {
-  background-color: #EF4444;
-  color: white;
-  border-color: #EF4444;
-}
-
-/* ── Status Chip (if used inline) ── */
-.status-chip {
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 0.72rem;
-    font-weight: 600;
-}
-.status-chip.active { background: #DCFCE7; color: #16A34A; }
+/* ── Responsive scrollbar hint ── */
+.data-table-root::-webkit-scrollbar { height: 5px; }
+.data-table-root::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }

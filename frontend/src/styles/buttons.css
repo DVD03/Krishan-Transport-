@@ -1,16 +1,117 @@
-.delete-btn {
-  background-color: transparent;
-  color: #EF4444;
-  border: 1px solid #FEE2E2;
-  padding: 4px 12px;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  font-weight: 500;
-  transition: all 0.2s;
+/* ═══════════════════════════════════════════
+   BUTTONS — Unified Design System
+   ═══════════════════════════════════════════ */
+
+/* Primary */
+.add-btn,
+.submit-btn,
+.btn-primary {
+  height: 42px; /* Standardized Height */
+  padding: 0 20px; /* Standardized Padding */
+  background: #2563EB !important;
+  color: #FFFFFF !important;
+  border: none;
+  border-radius: var(--r-md);
+  font-size: 0.88rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+  transition: all 0.18s ease;
+  cursor: pointer;
+}
+.add-btn:hover,
+.submit-btn:hover,
+.btn-primary:hover {
+  background: var(--primary-dark);
+  box-shadow: 0 4px 14px var(--primary-glow);
+  transform: translateY(-1px);
 }
 
-.delete-btn:hover {
-  background-color: #EF4444;
-  color: white;
-  border-color: #EF4444;
+/* Secondary */
+.secondary-btn,
+.cancel-btn,
+.btn-secondary {
+  height: 42px; /* Standardized Height to match Primary */
+  padding: 0 20px; /* Standardized Padding */
+  background: #fff;
+  color: var(--text-700);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  font-size: 0.88rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+  transition: all 0.18s ease;
+  cursor: pointer;
 }
+.secondary-btn:hover,
+.cancel-btn:hover,
+.btn-secondary:hover {
+  background: var(--bg-muted);
+  border-color: var(--text-300);
+  color: var(--text-900);
+}
+
+/* Edit */
+.edit-btn {
+  height: 28px;
+  padding: 0 12px;
+  background: var(--primary-light);
+  color: var(--primary);
+  border: 1px solid #BFDBFE;
+  border-radius: var(--r-sm);
+  font-size: 0.73rem;
+  font-weight: 700;
+  transition: all 0.18s ease;
+}
+.edit-btn:hover {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+/* Delete */
+.delete-btn {
+  height: 28px;
+  padding: 0 12px;
+  background: #FFF1F2;
+  color: #E11D48;
+  border: 1px solid #FECDD3;
+  border-radius: var(--r-sm);
+  font-size: 0.73rem;
+  font-weight: 700;
+  transition: all 0.18s ease;
+}
+.delete-btn:hover {
+  background: #E11D48;
+  color: #fff;
+  border-color: #E11D48;
+}
+
+/* Icon-only */
+.icon-btn {
+  width: 38px;
+  height: 38px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-500);
+  transition: all 0.18s ease;
+}
+.icon-btn:hover {
+  background: var(--bg-muted);
+  color: var(--primary);
+  border-color: var(--primary-glow);
+}
+
+.table-actions { display: flex; gap: 6px; align-items: center; }

@@ -22,7 +22,7 @@ const QuotationSchema = new mongoose.Schema({
   termsAndConditions: { type: String },
   
   estimatedTotal: { type: Number, default: 0 },
-  status: { type: String, enum: ['Draft', 'Sent', 'Accepted', 'Rejected'], default: 'Draft' }
+  status: { type: String, enum: ['Draft', 'Sent', 'Accepted', 'Rejected', 'Cancelled'], default: 'Draft' }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Quotation', QuotationSchema);

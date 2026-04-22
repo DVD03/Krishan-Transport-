@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LogOut } from 'lucide-react';
+import { LogOut, Menu, X } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import DieselBook from './components/DieselBook';
@@ -20,7 +20,7 @@ const PAGE_TITLES = {
   dashboard: 'Dashboard',
   hires: 'Hire Book',
   salaries: 'Salary Book',
-  diesel: 'Diesel Book',
+  diesel: 'Fuel Book',
   payments: 'Payment Book',
   clients: 'Clients',
   vehicles: 'Vehicles',
@@ -34,6 +34,7 @@ const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('kt_auth_token'));
   const [selectedRole, setSelectedRole] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const userRole = localStorage.getItem('kt_user_role');
   const userName = localStorage.getItem('kt_user_name');
 
@@ -48,11 +49,11 @@ const App = () => {
   const renderContent = () => {
     const restrictedTabs = ['employees', 'reports', 'salaries', 'clients', 'payments', 'invoices', 'quotations'];
     if (userRole === 'Employee' && restrictedTabs.includes(activeTab)) {
-      return <Dashboard role={userRole} name={userName} />;
+      return <Dashboard key={activeTab} role={userRole} name={userName} />;
     }
 
     switch(activeTab) {
-      case 'dashboard': return <Dashboard role={userRole} name={userName} />;
+      case 'dashboard': return <Dashboard key="dashboard" role={userRole} name={userName} />;
       case 'hires':     return <HireBook />;
       case 'salaries':  return <SalaryBook />;
       case 'diesel':    return <DieselBook />;
@@ -81,26 +82,62 @@ const App = () => {
   }
 
   return (
-    <div className="app-layout">
+    <div className={`app-layout ${isSidebarOpen ? 'sidebar-open' : ''}`}>
+      {/* Mobile Sidebar Overlay */}
+      {isSidebarOpen && (
+        <div 
+          className="sidebar-overlay" 
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       <Sidebar 
         activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
+        setActiveTab={(tab) => {
+          setActiveTab(tab);
+          setIsSidebarOpen(false); // Close sidebar on mobile after selection
+        }} 
         handleLogout={handleLogout} 
         role={userRole} 
         userName={userName}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
       />
       <main className="main-content">
         <header className="main-header">
-          <div className="header-info">
+          <div className="header-left">
+            <button 
+              className="mobile-menu-btn" 
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              title="Toggle Menu"
+            >
+              {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
             <h2>{PAGE_TITLES[activeTab] || 'Dashboard'}</h2>
-            {userRole === 'Employee' && <span className="user-context">Viewing as Employee</span>}
           </div>
-          <div className="header-actions">
-            <span className="user-name">Welcome, {userName || 'User'}</span>
-            <button className="header-logout-btn" onClick={handleLogout} title="Sign Out">
+          <div className="header-right">
+            <div className="user-nav-info">
+              <div className="nav-avatar">
+                {(userName || userRole || 'U')[0].toUpperCase()}
+              </div>
+              <div className="user-details">
+                <p>{userName || 'User'}</p>
+                <span>{userRole || 'Role'}</span>
+              </div>
+            </div>
+            <span className="current-date">{new Date().toDateString()}</span>
+            <button className="header-logout-btn" onClick={handleLogout} title="Sign Out" style={{
+              background: '#FEF2F2',
+              color: '#EF4444',
+              border: '1px solid #FEE2E2',
+              padding: '8px',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              cursor: 'pointer'
+            }}>
               <LogOut size={18} />
             </button>
-            <span className="current-date">{new Date().toDateString()}</span>
           </div>
         </header>
         <div className="content-area">

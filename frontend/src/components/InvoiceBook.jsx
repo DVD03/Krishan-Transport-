@@ -1,254 +1,200 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import { FileText, Plus, Download, Trash2, Search, ExternalLink, Loader2, Calendar, CheckCircle2, Clock, XCircle } from 'lucide-react';
+import DataTable from './DataTable';
+import Modal from './Modal';
+import RecordDetails from './RecordDetails';
+import InvoiceForm from './InvoiceForm';
+import { FileText, Plus, Download, Trash2, Search, RefreshCw, FileDown } from 'lucide-react';
 import { generateInvoicePDF } from '../utils/billingGenerator';
+import { generatePDFReport } from '../utils/reportGenerator';
 import '../styles/forms.css';
 import '../styles/books.css';
 
-const defaultForm = () => ({
-  clientName: '', site: '', vehicleNo: '', jobDescription: '',
-  date: new Date().toISOString().split('T')[0],
-  unitType: 'Hours', totalUnits: 0, ratePerUnit: 0,
-  transportCharge: 0, otherCharges: 0, otherChargesDescription: '',
-  totalAmount: 0, status: 'Draft'
-});
-
 const InvoiceBook = () => {
   const [invoices, setInvoices] = useState([]);
-  const [loading, setLoading]   = useState(true);
+  const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const userRole = localStorage.getItem('kt_user_role');
+  const canManage = isDev || ['Admin', 'Manager'].includes(userRole);
+  
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [showModal, setShowModal]   = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState(null);
+  const [editingItem, setEditingItem] = useState(null);
   const [submitting, setSubmitting] = useState(false);
-  const [formData, setFormData] = useState(defaultForm());
-
-  useEffect(() => { fetchInvoices(); }, []);
+  useEffect(() => { 
+    fetchInvoices(); 
+  }, []);
 
   const fetchInvoices = async () => {
+    setLoading(true);
     try {
       const res = await api.get('/invoices');
-      setInvoices(Array.isArray(res.data) ? res.data : []);
-    } catch (err) { console.error('Error fetching invoices', err); }
+      const raw = Array.isArray(res.data) ? res.data : [];
+      setInvoices(raw.map(inv => ({
+        ...inv,
+        rawData: inv, // Store original for Editing
+        vehicleType: inv.vehicleType || '—',
+        totalAmount_disp: `LKR ${(inv.totalAmount || 0).toLocaleString()}`,
+        status_disp: (
+          <span className={`status-badge ${inv.status === 'Paid' ? 'status-active' : inv.status === 'Cancelled' ? 'status-inactive' : inv.status === 'Sent' ? 'status-pending' : ''}`}>
+            {inv.status || 'Draft'}
+          </span>
+        ),
+        action: (
+          <div className="table-actions" onClick={e => e.stopPropagation()}>
+            <button className="edit-btn" style={{ background: '#ec4899', color:'white' }} onClick={() => generateInvoicePDF(inv)} title="Download PDF">
+               <FileDown size={14} /> PDF
+            </button>
+            {canManage && <button className="edit-btn" onClick={() => handleEdit(inv)}>Edit</button>}
+            {canManage && <button className="delete-btn" onClick={() => handleDelete(inv._id)}>Delete</button>}
+          </div>
+        )
+      })));
+    } catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
 
-  const calcTotal = (d) => {
-    const sub = (Number(d.totalUnits) || 0) * (Number(d.ratePerUnit) || 0);
-    return +(sub + (Number(d.transportCharge) || 0) + (Number(d.otherCharges) || 0)).toFixed(2);
+  const calcTotal = (d) => 
+    +((Number(d.totalUnits || 0) * Number(d.ratePerUnit || 0)) + Number(d.transportCharge || 0) + Number(d.otherCharges || 0)).toFixed(2);
+
+  const handleEdit = (item) => {
+    // Explicitly identify the item to edit
+    const target = item.rawData || item;
+    setEditingItem(target);
+    setShowModal(true);
   };
 
-  const handleChange = (e) => {
-    const updated = { ...formData, [e.target.name]: e.target.value };
-    updated.totalAmount = calcTotal(updated);
-    setFormData(updated);
+  const handleAddNew = () => {
+    setEditingItem(null);
+    setShowModal(true);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (data) => {
     setSubmitting(true);
     try {
-      await api.post('/invoices', { ...formData, totalAmount: calcTotal(formData) });
+      if (editingItem) {
+        await api.put(`/invoices/${editingItem._id}`, data);
+      } else {
+        await api.post('/invoices', data);
+      }
       setShowModal(false);
-      setFormData(defaultForm());
+      setEditingItem(null);
       fetchInvoices();
     } catch { alert('Error saving invoice'); }
     finally { setSubmitting(false); }
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Delete this invoice?')) {
+    if (window.confirm('Are you sure you want to delete this invoice?')) {
       await api.delete(`/invoices/${id}`);
       fetchInvoices();
     }
   };
 
+  const handleRowClick = (record) => {
+    setSelectedRecord(record);
+    setIsDetailsOpen(true);
+  };
+
+  const handleExportFullReport = () => {
+    const columns = ['INV#', 'DATE', 'CLIENT', 'SITE', 'VEHICLE TYPE', 'TOTAL', 'STATUS'];
+    const data = filtered.map(inv => [
+      inv.invoiceNo,
+      new Date(inv.date).toLocaleDateString(),
+      inv.clientName,
+      inv.vehicleNo || '—',
+      `Rs. ${inv.totalAmount?.toLocaleString()}`,
+      inv.status
+    ]);
+    generatePDFReport({
+      title: 'Invoices Summary Report',
+      columns,
+      data,
+      filename: `Invoices_Report_${new Date().toISOString().split('T')[0]}.pdf`
+    });
+  };
+
   const filtered = invoices.filter(inv =>
     (inv.clientName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (inv.invoiceNo  || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (inv.vehicleNo  || '').toLowerCase().includes(searchTerm.toLowerCase())
+    (inv.site       || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const badge = (status) => {
-    switch(status) {
-      case 'Paid':      return <span className="badge badge-success"><CheckCircle2 size={12} /> Paid</span>;
-      case 'Sent':      return <span className="badge badge-info"><ExternalLink size={12} /> Sent</span>;
-      case 'Cancelled': return <span className="badge badge-danger"><XCircle size={12} /> Cancelled</span>;
-      default:          return <span className="badge badge-warning"><Clock size={12} /> Draft</span>;
-    }
+  const stats = {
+    total: invoices.length,
+    unpaidCount: invoices.filter(i => i.status !== 'Paid').length,
+    totalRevenue: invoices.reduce((sum, i) => sum + (i.totalAmount || 0), 0)
   };
 
-  const totalRevenue = invoices.reduce((s, i) => s + (i.totalAmount || 0), 0);
-
-  const fd = formData;
-
   return (
-    <div className="hire-book-container">
-
-      {/* Summary */}
-      <div className="book-container">
-        <div className="book-summary">
-          <div className="summary-item"><label>TOTAL INVOICES</label><h3>{invoices.length}</h3></div>
-          <div className="summary-item" style={{ borderRight: 'none' }}>
-            <label>TOTAL BILLED</label>
-            <h3 style={{ color: 'var(--primary)' }}>LKR {totalRevenue.toLocaleString()}</h3>
-          </div>
+    <div className="book-container">
+      
+      <div className="book-summary">
+        <div className="summary-item">
+          <label>TOTAL INVOICES</label>
+          <h3>{stats.total} Records</h3>
+        </div>
+        <div className="summary-item">
+          <label>UNPAID</label>
+          <h3 style={{ color: '#EF4444' }}>{stats.unpaidCount} Pending</h3>
+        </div>
+        <div className="summary-item" style={{ borderRight: 'none' }}>
+          <label>TOTAL REVENUE</label>
+          <h3 style={{ color: '#2563EB' }}>LKR {stats.totalRevenue.toLocaleString()}</h3>
         </div>
       </div>
 
-      {/* Header */}
-      <div className="book-header">
-        <div className="header-main">
-          <div className="title-section"><FileText className="title-icon" size={24} /><h1>Professional Invoices</h1></div>
-          <button className="add-btn" onClick={() => setShowModal(true)}><Plus size={18} /> New Invoice</button>
+      <div className="book-filters">
+        <div className="search-box">
+          <Search className="search-icon" size={20} />
+          <input 
+            type="text" 
+            placeholder="Search by Invoice No, Client, Site..." 
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+          />
         </div>
-        <div className="search-bar">
-          <Search size={16} />
-          <input type="text" placeholder="Search by No, Client, Vehicle..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+        <div className="filter-actions">
+          <button className="secondary-btn" onClick={fetchInvoices} title="Refresh">
+            <RefreshCw size={18} className={loading ? 'spinner' : ''} />
+          </button>
+          <button className="secondary-btn" onClick={handleExportFullReport}>
+            <Download size={18} /> <span>Export Report</span>
+          </button>
+          <button className="add-btn" onClick={handleAddNew}>
+            <Plus size={18} /> <span>New Invoice</span>
+          </button>
         </div>
       </div>
 
-      {/* Table */}
-      {loading ? (
-        <div className="loading-state"><Loader2 className="spinner" /><p>Loading...</p></div>
-      ) : (
-        <div className="table-responsive">
-          <table className="hire-table">
-            <thead><tr>
-              <th>Invoice No</th><th>Date</th><th>Client</th><th>Site</th>
-              <th>Vehicle</th><th>Description</th><th>Units</th><th>Rate</th>
-              <th>Transport</th><th>Total</th><th>Status</th><th>Actions</th>
-            </tr></thead>
-            <tbody>
-              {filtered.length === 0 ? (
-                <tr><td colSpan={12} style={{ textAlign:'center', padding:'40px', color:'#94a3b8' }}>No invoices yet. Click "+ New Invoice" to create one.</td></tr>
-              ) : filtered.map(inv => (
-                <tr key={inv._id}>
-                  <td><strong>{inv.invoiceNo}</strong></td>
-                  <td>{new Date(inv.date).toLocaleDateString()}</td>
-                  <td>{inv.clientName}</td>
-                  <td>{inv.site || '—'}</td>
-                  <td>{inv.vehicleNo}</td>
-                  <td style={{ maxWidth: '160px', whiteSpace: 'normal' }}>{inv.jobDescription || '—'}</td>
-                  <td>{inv.totalUnits} {inv.unitType}</td>
-                  <td>LKR {(inv.ratePerUnit || 0).toLocaleString()}</td>
-                  <td>LKR {(inv.transportCharge || 0).toLocaleString()}</td>
-                  <td className="amount-cell">LKR {(inv.totalAmount || 0).toLocaleString()}</td>
-                  <td>{badge(inv.status)}</td>
-                  <td className="actions-cell">
-                    <button className="action-btn pdf" onClick={() => generateInvoicePDF(inv)} title="Download PDF"><Download size={15} /></button>
-                    <button className="action-btn delete" onClick={() => handleDelete(inv._id)} title="Delete"><Trash2 size={15} /></button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <DataTable 
+        columns={['INV#', 'DATE', 'CLIENT', 'SITE', 'VEHICLE', 'TOTAL', 'STATUS', 'ACTION']}
+        data={filtered}
+        loading={loading}
+        onRowClick={handleRowClick}
+        emptyMessage="No invoices found."
+      />
 
-      {/* Modal */}
-      {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal-content invoice-modal" onClick={e => e.stopPropagation()}>
+      {/* New/Edit Invoice Modal */}
+      <Modal 
+        isOpen={showModal} 
+        onClose={() => { setShowModal(false); setEditingItem(null); }} 
+        title={editingItem ? "Edit Invoice" : "Generate New Invoice"}
+      >
+        <InvoiceForm 
+          onSubmit={handleSubmit} 
+          onCancel={() => { setShowModal(false); setEditingItem(null); }} 
+          initialData={editingItem} 
+        />
+      </Modal>
 
-            {/* Sticky Header */}
-            <div className="modal-header">
-              <h2>New Professional Invoice</h2>
-              <button className="close-btn" onClick={() => setShowModal(false)}><span aria-hidden>✕</span></button>
-            </div>
+      {/* Details Modal */}
+      <Modal isOpen={isDetailsOpen} onClose={() => setIsDetailsOpen(false)} title="Invoice Details">
+        {selectedRecord && <RecordDetails data={selectedRecord} type="invoice" />}
+      </Modal>
 
-            <form onSubmit={handleSubmit} className="hire-form">
-              {/* Scrollable Body */}
-              <div className="hire-form-scroll">
-
-                {/* Client & Date */}
-                <div style={{ background:'#f8fafc', border:'1px solid #e8edf4', borderRadius:'10px', padding:'14px 16px', marginBottom:'12px' }}>
-                  <p style={{ fontSize:'0.75rem', fontWeight:'700', textTransform:'uppercase', letterSpacing:'0.06em', color:'#64748b', marginBottom:'12px', marginTop:0 }}>Client & Job Details</p>
-                  <div className="form-grid">
-                    <div className="form-group">
-                      <label>Client / Company *</label>
-                      <input type="text" name="clientName" value={fd.clientName} onChange={handleChange} required placeholder="Client name" />
-                    </div>
-                    <div className="form-group">
-                      <label>Site / Location</label>
-                      <input type="text" name="site" value={fd.site} onChange={handleChange} placeholder="Project site" />
-                    </div>
-                    <div className="form-group">
-                      <label>Vehicle Number *</label>
-                      <input type="text" name="vehicleNo" value={fd.vehicleNo} onChange={handleChange} required placeholder="e.g. ZA-8390" />
-                    </div>
-                    <div className="form-group">
-                      <label>Date *</label>
-                      <div className="input-with-icon">
-                        <Calendar size={15} />
-                        <input type="date" name="date" value={fd.date} onChange={handleChange} required />
-                      </div>
-                    </div>
-                    <div className="form-group full-width">
-                      <label>Job Description</label>
-                      <textarea name="jobDescription" value={fd.jobDescription} onChange={handleChange} rows={2} placeholder="Describe the work done..." />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Financial */}
-                <div style={{ background:'#f8fafc', border:'1px solid #e8edf4', borderRadius:'10px', padding:'14px 16px' }}>
-                  <p style={{ fontSize:'0.75rem', fontWeight:'700', textTransform:'uppercase', letterSpacing:'0.06em', color:'#64748b', marginBottom:'12px', marginTop:0 }}>Financial Breakdown</p>
-                  <div className="form-grid">
-                    <div className="form-group">
-                      <label>Unit Type</label>
-                      <select name="unitType" value={fd.unitType} onChange={handleChange}>
-                        <option value="Hours">Hours</option><option value="Days">Days</option>
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Total {fd.unitType}</label>
-                      <input type="number" name="totalUnits" value={fd.totalUnits} onChange={handleChange} min="0" step="0.01" />
-                    </div>
-                    <div className="form-group">
-                      <label>Rate per {fd.unitType} (LKR)</label>
-                      <input type="number" name="ratePerUnit" value={fd.ratePerUnit} onChange={handleChange} min="0" />
-                    </div>
-                    <div className="form-group">
-                      <label>Transport Charge (LKR)</label>
-                      <input type="number" name="transportCharge" value={fd.transportCharge} onChange={handleChange} min="0" />
-                    </div>
-                    <div className="form-group">
-                      <label>Other Charge Desc</label>
-                      <input type="text" name="otherChargesDescription" value={fd.otherChargesDescription} onChange={handleChange} placeholder="e.g. Overtime" />
-                    </div>
-                    <div className="form-group">
-                      <label>Other Charges (LKR)</label>
-                      <input type="number" name="otherCharges" value={fd.otherCharges} onChange={handleChange} min="0" />
-                    </div>
-                    <div className="form-group">
-                      <label>Status</label>
-                      <select name="status" value={fd.status} onChange={handleChange}>
-                        <option value="Draft">Draft</option><option value="Sent">Sent</option>
-                        <option value="Paid">Paid</option><option value="Cancelled">Cancelled</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-              </div>{/* end hire-form-scroll */}
-
-              {/* Sticky Footer */}
-              <div className="hire-form-footer">
-                <div className="total-display">
-                  <span>Grand Total</span>
-                  <strong>LKR {calcTotal(fd).toLocaleString()}</strong>
-                </div>
-                <div className="modal-actions">
-                  <button type="button" className="cancel-btn" onClick={() => setShowModal(false)}>Cancel</button>
-                  <button type="submit" className="submit-btn" disabled={submitting}>
-                    {submitting ? 'Saving...' : 'Save Invoice'}
-                  </button>
-                </div>
-              </div>
-
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

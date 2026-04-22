@@ -24,6 +24,20 @@ router.post('/', authMiddleware, authorizeRoles('Admin', 'Manager'), async (req,
   }
 });
 
+// Update vehicle
+router.put('/:id', authMiddleware, authorizeRoles('Admin', 'Manager'), async (req, res) => {
+  try {
+    const updatedVehicle = await Vehicle.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+    res.json(updatedVehicle);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+});
+
 // Delete vehicle
 router.delete('/:id', authMiddleware, authorizeRoles('Admin', 'Manager'), async (req, res) => {
   try {

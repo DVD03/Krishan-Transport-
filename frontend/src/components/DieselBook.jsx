@@ -9,23 +9,25 @@ import '../styles/forms.css';
 import '../styles/books.css';
 import VehicleFilter from './VehicleFilter';
 
+const FUEL_TYPES = ['All', 'Diesel', 'Petrol'];
+
 const DieselBook = () => {
   const userRole = localStorage.getItem('kt_user_role');
-  const canManage = ['Admin', 'Manager'].includes(userRole);
+  const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const canManage = isDev || ['Admin', 'Manager'].includes(userRole);
 
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [dieselRecords, setDieselRecords] = React.useState([]);
   const [vehicles, setVehicles] = React.useState([]);
   const [selectedVehicle, setSelectedVehicle] = React.useState(null);
+  const [selectedFuelType, setSelectedFuelType] = React.useState('All');
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState(null);
   const [editingItem, setEditingItem] = React.useState(null);
   const [success, setSuccess] = React.useState(null);
   const [searchQuery, setSearchQuery] = React.useState('');
 
-  const columns = canManage
-    ? ['DATE', 'EMPLOYEE', 'VEHICLE', 'LITERS', 'PRICE/L', 'TOTAL', 'ODOMETER', 'NOTE', 'ACTION']
-    : ['DATE', 'EMPLOYEE', 'VEHICLE', 'LITERS', 'PRICE/L', 'TOTAL', 'ODOMETER', 'NOTE'];
+  const columns = ['DATE', 'VEHICLE', 'FUEL TYPE', 'DRIVER', 'LITERS', 'TOTAL COST', 'STATUS', 'ACTION'];
 
   React.useEffect(() => {
     fetchRecords();
@@ -44,25 +46,41 @@ const DieselBook = () => {
     try {
       const response = await dieselAPI.get();
       const rawData = Array.isArray(response.data) ? response.data : [];
-      
+
       const formatted = rawData.map(item => ({
         ...item,
+        rawData: item,
         date: new Date(item.date).toLocaleDateString(),
-        employee: item.employee || '—',
-        pricePerLiter_disp: `LKR ${(item.pricePerLiter || 0).toLocaleString()}`,
-        total_val: item.total,
-        total: `LKR ${Number(item.total).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,
-        action: canManage ? (
-          <div className="table-actions">
-            <button className="edit-btn" onClick={() => handleEdit(item)}>Edit</button>
-            <button className="delete-btn" onClick={() => handleDelete(item._id)}>Delete</button>
+        vehicle: item.vehicle,
+        fuelType_disp: (
+          <span
+            className={`status-badge ${item.fuelType === 'Petrol' ? 'status-pending' : 'status-active'}`}
+            style={item.fuelType === 'Petrol'
+              ? { background: '#EDE9FE', color: '#7C3AED', border: '1px solid #C4B5FD' }
+              : { background: '#D1FAE5', color: '#065F46', border: '1px solid #6EE7B7' }}
+          >
+            {item.fuelType || 'Diesel'}
+          </span>
+        ),
+        driver: item.employee || '—',
+        liters: item.liters,
+        totalCost: `LKR ${(item.total || 0).toLocaleString()}`,
+        status_disp: (
+          <span className={`status-badge ${item.status === 'Verified' ? 'status-active' : 'status-pending'}`}>
+            {item.status || 'Logged'}
+          </span>
+        ),
+        action: (
+          <div className="table-actions" onClick={e => e.stopPropagation()}>
+            {canManage && <button className="edit-btn" onClick={() => handleEdit(item)}>Edit</button>}
+            {canManage && <button className="delete-btn" onClick={() => handleDelete(item._id)}>Delete</button>}
           </div>
-        ) : null
+        )
       }));
       setDieselRecords(formatted);
       setError(null);
     } catch (err) {
-      setError('Connection issue: could not load diesel records.');
+      setError('Connection issue: could not load fuel records.');
     } finally {
       setLoading(false);
     }
@@ -70,20 +88,21 @@ const DieselBook = () => {
 
   const filteredRecords = React.useMemo(() => {
     return dieselRecords.filter(r => {
-      const matchVehicle = !selectedVehicle || r.vehicle === selectedVehicle;
-      const matchSearch = !searchQuery || 
+      const matchVehicle  = !selectedVehicle || r.vehicle === selectedVehicle;
+      const matchFuelType = selectedFuelType === 'All' || (r.fuelType || 'Diesel') === selectedFuelType;
+      const matchSearch   = !searchQuery ||
         (r.employee || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
         (r.vehicle  || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
         (r.date     || '').toLowerCase().includes(searchQuery.toLowerCase());
-      return matchVehicle && matchSearch;
+      return matchVehicle && matchFuelType && matchSearch;
     });
-  }, [dieselRecords, selectedVehicle, searchQuery]);
+  }, [dieselRecords, selectedVehicle, selectedFuelType, searchQuery]);
 
-  // Summary Calculations
+  // Summary stats — scoped to current filter
   const stats = React.useMemo(() => {
     const totalLiters = filteredRecords.reduce((sum, r) => sum + (parseFloat(r.liters) || 0), 0);
-    const totalCost = filteredRecords.reduce((sum, r) => sum + (parseFloat(r.total_val) || 0), 0);
-    const avgPrice = totalLiters > 0 ? totalCost / totalLiters : 0;
+    const totalCost   = filteredRecords.reduce((sum, r) => sum + (parseFloat(r.rawData?.total ?? r.total) || 0), 0);
+    const avgPrice    = totalLiters > 0 ? totalCost / totalLiters : 0;
     return { totalLiters, totalCost, avgPrice };
   }, [filteredRecords]);
 
@@ -91,28 +110,34 @@ const DieselBook = () => {
     try {
       if (editingItem) {
         await dieselAPI.update(editingItem._id, data);
-        setSuccess('Diesel entry updated!');
+        setSuccess('Fuel entry updated!');
       } else {
         await dieselAPI.create(data);
-        setSuccess('Diesel entry added!');
+        setSuccess('Fuel entry added!');
       }
       fetchRecords();
       setIsModalOpen(false);
       setEditingItem(null);
       setTimeout(() => setSuccess(null), 3000);
     } catch (err) {
-      setError(err.response?.data?.message || 'Error saving diesel entry.');
+      setError(err.response?.data?.message || 'Error saving fuel entry.');
       setTimeout(() => setError(null), 5000);
     }
   };
 
   const handleEdit = (item) => {
-    setEditingItem(item);
+    const target = item.rawData || item;
+    setEditingItem(target);
+    setIsModalOpen(true);
+  };
+
+  const handleAddNew = () => {
+    setEditingItem(null);
     setIsModalOpen(true);
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Delete this diesel record?')) {
+    if (window.confirm('Delete this fuel record?')) {
       try {
         await dieselAPI.delete(id);
         setSuccess('Entry deleted.');
@@ -126,35 +151,56 @@ const DieselBook = () => {
   };
 
   const handleExportPDF = () => {
-    const exportColumns = ['DATE', 'EMPLOYEE', 'VEHICLE', 'LITERS', 'PRICE/L', 'TOTAL', 'ODOMETER', 'NOTE'];
+    const exportColumns = ['DATE', 'FUEL TYPE', 'EMPLOYEE', 'VEHICLE', 'LITERS', 'PRICE/L', 'TOTAL', 'ODOMETER', 'NOTE'];
     const exportData = filteredRecords.map(r => [
       r.date || '—',
+      r.fuelType || 'Diesel',
       r.employee || '—',
       r.vehicle || '—',
       r.liters || '—',
-      r.pricePerLiter_disp || '—',
+      r.pricePerLiter || '—',
       r.total || '—',
       r.odometer || '—',
       r.note || '—'
     ]);
-    
+
     generatePDFReport({
-      title: 'Diesel Book Report',
+      title: `Fuel Book Report${selectedFuelType !== 'All' ? ` — ${selectedFuelType}` : ''}`,
       columns: exportColumns,
       data: exportData,
-      filename: `DieselBook_Report_${new Date().toISOString().split('T')[0]}.pdf`
+      filename: `FuelBook_${selectedFuelType}_${new Date().toISOString().split('T')[0]}.pdf`
     });
   };
 
+  // Fuel type filter tab styles
+  const fuelTabStyle = (type) => ({
+    padding: '6px 18px',
+    borderRadius: '20px',
+    border: 'none',
+    cursor: 'pointer',
+    fontWeight: 600,
+    fontSize: '13px',
+    transition: 'all 0.2s',
+    ...(selectedFuelType === type
+      ? type === 'Diesel'
+        ? { background: '#D1FAE5', color: '#065F46', boxShadow: '0 0 0 2px #6EE7B7' }
+        : type === 'Petrol'
+          ? { background: '#EDE9FE', color: '#7C3AED', boxShadow: '0 0 0 2px #C4B5FD' }
+          : { background: '#1E3A5F', color: '#fff', boxShadow: '0 0 0 2px #3B82F6' }
+      : { background: '#F1F5F9', color: '#64748B' })
+  });
+
   return (
     <div className="book-container">
+
+      {/* Summary Stats */}
       <div className="book-summary">
         <div className="summary-item">
-          <label>TOTAL LITERS</label>
+          <label>TOTAL LITERS{selectedFuelType !== 'All' ? ` (${selectedFuelType})` : ''}</label>
           <h3>{stats.totalLiters.toFixed(1)} L</h3>
         </div>
         <div className="summary-item">
-          <label>TOTAL COST</label>
+          <label>TOTAL COST{selectedFuelType !== 'All' ? ` (${selectedFuelType})` : ''}</label>
           <h3 style={{ color: '#EF4444' }}>LKR {stats.totalCost.toLocaleString()}</h3>
         </div>
         <div className="summary-item" style={{ borderRight: 'none' }}>
@@ -163,18 +209,30 @@ const DieselBook = () => {
         </div>
       </div>
 
-      <VehicleFilter 
-        vehicles={vehicles} 
-        selectedVehicle={selectedVehicle} 
-        onSelect={setSelectedVehicle} 
+      {/* Fuel Type Filter Tabs */}
+      <div style={{ display: 'flex', gap: '8px', padding: '12px 20px', background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', flexWrap: 'wrap', alignItems: 'center' }}>
+        <span style={{ fontSize: '12px', color: '#94A3B8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: '4px' }}>Fuel Type:</span>
+        {FUEL_TYPES.map(type => (
+          <button key={type} style={fuelTabStyle(type)} onClick={() => setSelectedFuelType(type)}>
+            {type === 'All' ? 'All' : type === 'Diesel' ? 'Diesel' : 'Petrol'}
+          </button>
+        ))}
+      </div>
+
+      {/* Vehicle Filter */}
+      <VehicleFilter
+        vehicles={vehicles}
+        selectedVehicle={selectedVehicle}
+        onSelect={setSelectedVehicle}
       />
 
+      {/* Search + Actions */}
       <div className="book-filters">
         <div className="search-box">
           <Search className="search-icon" size={16} />
-          <input 
-            type="text" 
-            placeholder="Search date, employee, vehicle..." 
+          <input
+            type="text"
+            placeholder="Search date, driver, vehicle..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
           />
@@ -184,7 +242,7 @@ const DieselBook = () => {
             <Download size={16} /> Export PDF
           </button>
           {canManage && (
-            <button className="add-btn" onClick={() => { setEditingItem(null); setIsModalOpen(true); }}>
+            <button className="add-btn" onClick={handleAddNew}>
               + Add Entry
             </button>
           )}
@@ -192,23 +250,23 @@ const DieselBook = () => {
       </div>
 
       {success && <div className="success-banner">{success}</div>}
-      {error && <div className="error-banner">{error}</div>}
+      {error   && <div className="error-banner">{error}</div>}
 
-      <DataTable 
-        columns={columns} 
-        data={filteredRecords} 
+      <DataTable
+        columns={columns}
+        data={filteredRecords}
         loading={loading}
-        emptyMessage={loading ? "Loading..." : "No diesel records found."} 
+        emptyMessage={loading ? 'Loading...' : `No ${selectedFuelType === 'All' ? 'fuel' : selectedFuelType.toLowerCase()} records found.`}
       />
 
-      <Modal 
-        isOpen={isModalOpen} 
-        onClose={() => { setIsModalOpen(false); setEditingItem(null); }} 
-        title={editingItem ? 'Edit Diesel Entry' : 'Add Diesel Entry'}
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => { setIsModalOpen(false); setEditingItem(null); }}
+        title={editingItem ? 'Edit Fuel Entry' : 'Add Fuel Entry'}
       >
-        <DieselForm 
-          onSubmit={handleAddEntry} 
-          onCancel={() => { setIsModalOpen(false); setEditingItem(null); }} 
+        <DieselForm
+          onSubmit={handleAddEntry}
+          onCancel={() => { setIsModalOpen(false); setEditingItem(null); }}
           initialData={editingItem}
         />
       </Modal>

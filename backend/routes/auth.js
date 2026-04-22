@@ -50,8 +50,11 @@ router.post('/login', async (req, res) => {
     });
 
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error during login' });
+    console.error('Login Failure:', err);
+    res.status(500).json({ 
+      message: 'Server error during login',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined 
+    });
   }
 });
 

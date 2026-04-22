@@ -6,13 +6,14 @@ const InvoiceSchema = new mongoose.Schema({
   clientName: { type: String, required: true },
   site: { type: String },
   vehicleNo: { type: String, required: true },
+  vehicleType: { type: String },
   jobDescription: { type: String },
   
   // Time tracking
   startTime: { type: String },
   endTime: { type: String },
   totalUnits: { type: Number, default: 0 }, // Hours or Days
-  unitType: { type: String, enum: ['Hours', 'Days'], default: 'Hours' },
+  unitType: { type: String, enum: ['Hours', 'Days', 'Lumpsum', 'KM'], default: 'Hours' },
   ratePerUnit: { type: Number, default: 0 },
   
   // Additional Charges

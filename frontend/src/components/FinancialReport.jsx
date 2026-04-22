@@ -219,7 +219,7 @@ const FinancialReport = () => {
             <div className="kpi-sub">{stats.fSalaries.length} employees</div>
           </div>
           <div className="kpi-card" style={{ '--kpi-color': '#EF4444' }}>
-            <div className="kpi-label">Diesel Cost</div>
+            <div className="kpi-label">Fuel Cost</div>
             <div className="kpi-value">LKR {stats.totalDiesel.toLocaleString()}</div>
             <div className="kpi-sub">{stats.fDiesel.length} fill-ups</div>
           </div>
@@ -267,7 +267,7 @@ const FinancialReport = () => {
                 <td>{stats.totalHire > 0 ? ((stats.totalSalary / stats.totalHire) * 100).toFixed(1) + '%' : '—'}</td>
               </tr>
               <tr>
-                <td><span className="cat-badge cat-expense">Diesel Cost</span></td>
+                <td><span className="cat-badge cat-expense">Fuel Cost</span></td>
                 <td>Expense</td>
                 <td>{stats.fDiesel.length}</td>
                 <td className="amount-cell amount-neg">− {stats.totalDiesel.toLocaleString()}</td>

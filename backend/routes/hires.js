@@ -8,7 +8,10 @@ router.get('/', authMiddleware, async (req, res) => {
     let query = {};
     // Restrict access for all roles EXCEPT Admin and Manager
     if (req.user.role !== 'Admin' && req.user.role !== 'Manager') {
-      query.employee = req.user.name;
+      query.$or = [
+        { driverName: req.user.name },
+        { helperName: req.user.name }
+      ];
     }
     const records = await Hire.find(query).sort({ date: -1 });
     res.json(records);

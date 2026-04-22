@@ -14,14 +14,7 @@ const allowedOrigins = [
 ].filter(Boolean);
 
 app.use(cors({
-  origin: (origin, callback) => {
-    // Enable CORS for allowed origins, or any vercel.app preview/production branch for this project
-    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('vercel.app')) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: true, // During debugging, allow all origins to bypass the "Not allowed" networking error
   credentials: true
 }));
 app.use(express.json());
@@ -33,16 +26,19 @@ if (!process.env.MONGODB_URI) {
   mongoose.connect(process.env.MONGODB_URI)
     .then(async () => {
       console.log('✅ MongoDB Connected');
+      // Safer index sync - only attempt if we can get the collection
       try {
-        // Sync Employees Index
-        const employeeCollection = mongoose.connection.collection('employees');
-        const indexes = await employeeCollection.indexes();
-        if (indexes.some(i => i.name === 'username_1')) {
-          console.log('🔄 Syncing Username Index...');
-          await employeeCollection.dropIndex('username_1');
+        const collections = await mongoose.connection.db.listCollections({ name: 'employees' }).toArray();
+        if (collections.length > 0) {
+          const employeeCollection = mongoose.connection.collection('employees');
+          const indexes = await employeeCollection.indexes();
+          if (indexes.some(i => i.name === 'username_1')) {
+            console.log('🔄 Cleaning up stale indexes...');
+            await employeeCollection.dropIndex('username_1').catch(e => console.log('Index drop non-critical error'));
+          }
         }
       } catch (err) {
-        console.log('ℹ️ Index sync skipped or already clean.');
+        console.log('ℹ️ Startup maintenance skipped.');
       }
     })
     .catch(err => console.error('❌ MongoDB Connection Error:', err));

@@ -1,91 +1,186 @@
 import React, { useState, useEffect } from 'react';
-import { vehicleAPI, employeeAPI } from '../services/api';
+import { vehicleAPI, employeeAPI, dieselAPI } from '../services/api';
+import '../styles/forms.css';
 
 const DieselForm = ({ onSubmit, onCancel, initialData }) => {
   const [vehicles, setVehicles] = useState([]);
   const [employees, setEmployees] = useState([]);
-  const [formData, setFormData] = useState(initialData ? {
-    ...initialData,
-    date: initialData.date ? new Date(initialData.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
-  } : {
+  const [previousLogs, setPreviousLogs] = useState([]);
+
+  const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     employee: '',
     vehicle: '',
+    fuelType: 'Diesel',
     liters: '',
     pricePerLiter: '',
     odometer: '',
-    note: ''
+    note: '',
+    status: 'Logged'
   });
+
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        ...initialData,
+        date: initialData.date ? new Date(initialData.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+      });
+    } else {
+      setFormData({
+        date: new Date().toISOString().split('T')[0],
+        employee: '',
+        vehicle: '',
+        fuelType: 'Diesel',
+        liters: '',
+        pricePerLiter: '',
+        odometer: '',
+        note: '',
+        status: 'Logged'
+      });
+    }
+  }, [initialData]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [vRes, eRes] = await Promise.all([vehicleAPI.get(), employeeAPI.get()]);
+        const [vRes, eRes, dRes] = await Promise.all([
+          vehicleAPI.get(), 
+          employeeAPI.get(),
+          dieselAPI.get()
+        ]);
         setVehicles(Array.isArray(vRes.data) ? vRes.data : []);
-        setEmployees(Array.isArray(eRes.data) ? eRes.data.filter(e => e.status === 'Active') : []);
+        setEmployees(Array.isArray(eRes.data) ? eRes.data.filter(e => e.status === 'Active' && e.role === 'Driver') : []);
+        setPreviousLogs(Array.isArray(dRes.data) ? dRes.data : []);
       } catch (err) { console.error(err); }
     };
     fetchData();
   }, []);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    setFormData(prev => {
+      const updated = { ...prev, [name]: value };
+
+      if (name === 'vehicle' && value && !initialData) {
+        // Auto-fill fuelType from vehicle's registered fuel type (always, default Diesel)
+        const vehicleObj = vehicles.find(v => v.number === value);
+        updated.fuelType = vehicleObj?.fuelType || 'Diesel';
+        // Also auto-fill last known driver from previous logs
+        const lastLog = previousLogs
+          .filter(l => l.vehicle === value)
+          .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+        if (lastLog) {
+          updated.employee = lastLog.employee || '';
+        }
+      }
+
+      return updated;
+    });
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const total = parseFloat(formData.liters) * parseFloat(formData.pricePerLiter);
+    const total = parseFloat(formData.liters || 0) * parseFloat(formData.pricePerLiter || 0);
     onSubmit({ ...formData, total });
   };
 
+  const total_val = parseFloat(formData.liters || 0) * parseFloat(formData.pricePerLiter || 0);
+
   return (
-    <form className="entry-form" onSubmit={handleSubmit}>
-      <div className="form-group">
-        <label>Date</label>
-        <input type="date" name="date" value={formData.date} onChange={handleChange} required />
+    <form className="hire-form" onSubmit={handleSubmit}>
+      <div className="hire-form-scroll">
+        
+        <div className="form-section">
+          <p className="form-section-title">Fuel Log Details</p>
+          <div className="form-grid">
+            <div className="form-group">
+              <label>Date *</label>
+              <input type="date" name="date" value={formData.date} onChange={handleChange} required />
+            </div>
+            <div className="form-group">
+              <label>Assigned Vehicle *</label>
+              <select name="vehicle" value={formData.vehicle} onChange={handleChange} required>
+                <option value="">Select a Vehicle</option>
+                {vehicles.map(v => (
+                  <option key={v._id} value={v.number}>{v.number}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Driver / Staff</label>
+              <select name="employee" value={formData.employee || ''} onChange={handleChange}>
+                <option value="">— Select Employee —</option>
+                {employees.map(emp => (
+                  <option key={emp._id} value={emp.name}>{emp.name} ({emp.role})</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div className="form-section">
+          <p className="form-section-title">Consumption Data</p>
+          <div className="form-grid">
+            <div className="form-group">
+              <label>Fuel Type *</label>
+              <select name="fuelType" value={formData.fuelType} onChange={handleChange} required>
+                <option value="Diesel">Diesel</option>
+                <option value="Petrol">Petrol</option>
+              </select>
+              {formData.vehicle && (() => {
+                const vObj = vehicles.find(v => v.number === formData.vehicle);
+                return vObj ? (
+                  <span style={{ fontSize: '11px', color: '#2563EB', marginTop: '4px', display: 'block' }}>
+                    Auto-filled from vehicle record
+                  </span>
+                ) : null;
+              })()}
+            </div>
+            <div className="form-group">
+              <label>Fuel Liters *</label>
+              <input type="number" step="0.01" name="liters" value={formData.liters} onChange={handleChange} required placeholder="e.g. 50.25" />
+            </div>
+            <div className="form-group">
+              <label>Price per Liter *</label>
+              <input type="number" step="0.01" name="pricePerLiter" value={formData.pricePerLiter} onChange={handleChange} required placeholder="LKR" />
+            </div>
+            <div className="form-group">
+              <label>Odometer Reading</label>
+              <input type="number" name="odometer" value={formData.odometer} onChange={handleChange} placeholder="Current KM" />
+            </div>
+          </div>
+          <div className="form-group" style={{ marginTop: '20px' }}>
+            <label>Calculated Cost (LKR)</label>
+            <input type="number" value={total_val} readOnly className="input-highlight-green" />
+          </div>
+        </div>
+
+        <div className="form-section">
+          <p className="form-section-title">Additional Remarks</p>
+          <div className="form-group">
+            <label>Notes</label>
+            <textarea name="note" value={formData.note} onChange={handleChange} rows="3" placeholder="Pump details, fuel station, etc." />
+          </div>
+          <div className="form-group" style={{ marginTop: '16px' }}>
+            <label>Status</label>
+            <select name="status" value={formData.status} onChange={handleChange}>
+              <option value="Logged">Logged</option>
+              <option value="Verified">Verified</option>
+            </select>
+          </div>
+        </div>
+
       </div>
 
-      <div className="form-group">
-        <label>Employee (Filled By)</label>
-        <select name="employee" value={formData.employee || ''} onChange={handleChange}>
-          <option value="">— Select Employee —</option>
-          {employees.map(emp => (
-            <option key={emp._id} value={emp.name}>{emp.name} ({emp.role})</option>
-          ))}
-        </select>
-      </div>
-
-      <div className="form-group">
-        <label>Vehicle Number</label>
-        <select name="vehicle" value={formData.vehicle} onChange={handleChange} required>
-          <option value="">Select a Vehicle</option>
-          {vehicles.map(v => (
-            <option key={v._id} value={v.number}>{v.number}</option>
-          ))}
-        </select>
-      </div>
-      <div className="form-row">
-        <div className="form-group">
-          <label>Liters</label>
-          <input type="number" step="0.01" name="liters" value={formData.liters} onChange={handleChange} required />
+      <div className="hire-form-footer">
+        <div className="total-display">
+          <span>Fuel Cost</span>
+          <strong>LKR {total_val.toLocaleString()}</strong>
         </div>
-        <div className="form-group">
-          <label>Price per Liter</label>
-          <input type="number" step="0.01" name="pricePerLiter" value={formData.pricePerLiter} onChange={handleChange} required />
+        <div className="modal-actions">
+          <button type="button" className="cancel-btn" onClick={onCancel}>Cancel</button>
+          <button type="submit" className="submit-btn">{initialData ? 'Update Log' : 'Save Fuel Log'}</button>
         </div>
-      </div>
-      <div className="form-group">
-        <label>Odometer Reading</label>
-        <input type="number" name="odometer" value={formData.odometer} onChange={handleChange} />
-      </div>
-      <div className="form-group">
-        <label>Note</label>
-        <textarea name="note" value={formData.note} onChange={handleChange}></textarea>
-      </div>
-      
-      <div className="form-actions">
-        <button type="button" className="secondary-btn" onClick={onCancel}>Cancel</button>
-        <button type="submit" className="primary-btn">{initialData ? 'Update Entry' : 'Save Entry'}</button>
       </div>
     </form>
   );

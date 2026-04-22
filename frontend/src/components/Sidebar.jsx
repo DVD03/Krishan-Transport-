@@ -11,17 +11,18 @@ import {
   FileBarChart,
   Car,
   FileText,
-  FileCheck
+  FileCheck,
+  X
 } from 'lucide-react';
 import './Sidebar.css';
 import logo from '../logo.png';
 
-const Sidebar = ({ activeTab, setActiveTab, handleLogout, role, userName }) => {
+const Sidebar = ({ activeTab, setActiveTab, handleLogout, role, userName, isOpen, onClose }) => {
   const allMenuItems = [
     { id: 'dashboard',  label: 'Dashboard',        icon: LayoutDashboard },
     { id: 'hires',      label: 'Hire Book',         icon: Truck },
     { id: 'salaries',   label: 'Salary Book',       icon: Contact },
-    { id: 'diesel',     label: 'Diesel Book',        icon: Fuel },
+    { id: 'diesel',     label: 'Fuel Book',          icon: Fuel },
     { id: 'payments',   label: 'Payment Book',       icon: CreditCard },
     { id: 'invoices',   label: 'Invoices',           icon: FileText },
     { id: 'quotations', label: 'Quotations',         icon: FileCheck },
@@ -40,9 +41,14 @@ const Sidebar = ({ activeTab, setActiveTab, handleLogout, role, userName }) => {
   });
 
   return (
-    <div className="sidebar">
+    <div className={`sidebar ${isOpen ? 'open' : ''}`}>
       <div className="sidebar-logo">
-        <img src={logo} alt="Krishan Transport Logo" className="app-logo" />
+        <div className="logo-row">
+          <img src={logo} alt="Krishan Transport Logo" className="app-logo" />
+          <button className="sidebar-close-btn" onClick={onClose}>
+            <X size={20} />
+          </button>
+        </div>
         <div className="logo-text">
           <span className="logo-subtitle">MANAGEMENT SYSTEM</span>
         </div>

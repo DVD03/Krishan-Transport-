@@ -1,58 +1,109 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 @import './styles/buttons.css';
 @import './styles/feedback.css';
 
+/* ═══════════════════════════════════════════
+   KRISHAN TRANSPORT — Global Design System
+   ═══════════════════════════════════════════ */
 :root {
-  --primary: #2563EB; /* Professional Blue */
-  --primary-hover: #1D4ED8;
-  --bg-main: #FFFFFF;
-  --bg-secondary: #F8FAFC;
-  --text-main: #0F172A;
-  --text-secondary: #475569;
-  --border: #E2E8F0;
-  --card-bg: #FFFFFF;
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  --sidebar-width: 260px;
-  --radius: 12px;
+  /* Brand Colors */
+  --primary:       #2563EB;
+  --primary-dark:  #1D4ED8;
+  --primary-light: #EFF6FF;
+  --primary-glow:  rgba(37, 99, 235, 0.18);
+
+  /* Accent */
+  --green:        #10B981;
+  --amber:        #F59E0B;
+  --red:          #EF4444;
+  --purple:       #8B5CF6;
+
+  /* Surfaces */
+  --bg-body:      #F0F4FF;
+  --bg-card:      #FFFFFF;
+  --bg-sidebar:   #0F172A;
+  --bg-muted:     #F8FAFC;
+
+  /* Text */
+  --text-900: #0F172A;
+  --text-700: #334155;
+  --text-500: #64748B;
+  --text-300: #94A3B8;
+
+  /* Borders */
+  --border:     #E2E8F0;
+  --border-sm:  rgba(226, 232, 240, 0.6);
+
+  /* Shape */
+  --r-sm:  6px;
+  --r-md:  10px;
+  --r-lg:  14px;
+  --r-xl:  20px;
+
+  /* Shadows */
+  --s-xs: 0 1px 2px rgba(0,0,0,0.05);
+  --s-sm: 0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
+  --s-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -1px rgba(0,0,0,0.04);
+  --s-lg: 0 10px 25px -5px rgba(37,99,235,0.08), 0 4px 10px -3px rgba(0,0,0,0.05);
+
+  /* Layout */
+  --sidebar-w: 256px;
+  --header-h:  64px;
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 16px; -webkit-font-smoothing: antialiased; }
 
 body {
-  font-family: 'Poppins', sans-serif;
-  background-color: var(--bg-secondary);
-  color: var(--text-main);
+  margin: 0;
+  min-height: 100vh;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  color: var(--text-900);
+  background: 
+    radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.07) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(16, 185, 129, 0.04) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(37, 99, 235, 0.04) 0px, transparent 50%),
+    radial-gradient(at 0% 100%, rgba(16, 185, 129, 0.07) 0px, transparent 50%),
+    radial-gradient(at 50% 50%, rgba(255, 255, 255, 0.9) 0px, transparent 80%),
+    linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  background-attachment: fixed;
   overflow-x: hidden;
 }
 
 button {
-  font-family: 'Poppins', sans-serif;
+  font-family: 'Inter', sans-serif;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.18s ease;
 }
 
-a {
-  text-decoration: none;
-  color: inherit;
+input, select, textarea {
+  font-family: 'Inter', sans-serif;
+  color-scheme: light;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
+/* ── App Root ── */
+.app-layout,
+.app-container {
+  display: flex;
+  min-height: 100vh;
 }
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: #CBD5E1;
-  border-radius: 10px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #94A3B8;
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-300); }
+
+/* ── Current Date Pill ── */
+.current-date {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-500);
+  background: var(--bg-muted);
+  padding: 5px 12px;
+  border-radius: 99px;
+  border: 1px solid var(--border);
 }

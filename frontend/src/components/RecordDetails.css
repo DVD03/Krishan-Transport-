@@ -1,0 +1,108 @@
+/* ═══════════════════════════════════════════
+   PREMIUM RECORD DETAILS — Enterprise Grade UI
+   ═══════════════════════════════════════════ */
+
+.details-overlay {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 16px 8px;
+  max-height: 75vh;
+  overflow-y: auto;
+}
+
+.detail-actions-header {
+  display: flex;
+  justify-content: flex-end;
+  padding-bottom: 0;
+  margin-bottom: 8px;
+  border: none;
+}
+
+.download-pdf-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  background: var(--bg-100);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-md);
+  color: var(--text-900);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.download-pdf-btn:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+}
+
+.detail-section {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.detail-section-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #1e293b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #f1f5f9;
+  margin-block: 0;
+  margin-bottom: 24px;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px 32px;
+}
+
+.detail-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detail-field label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.detail-field p {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #0f172a;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  margin: 0;
+  word-break: break-word;
+}
+
+@media (max-width: 768px) {
+  .detail-grid { grid-template-columns: repeat(2, 1fr); }
+  .detail-section { padding: 18px; }
+}
+
+@media (max-width: 480px) {
+  .detail-grid { grid-template-columns: 1fr; }
+  .detail-section { padding: 16px; }
+}

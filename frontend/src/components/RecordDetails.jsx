@@ -1,35 +1,35 @@
 import React from 'react';
+import { Download } from 'lucide-react';
+import { generateInvoicePDF, generateQuotationPDF } from '../utils/billingGenerator';
+import './RecordDetails.css';
 
 const RecordDetails = ({ data, type }) => {
   if (!data) return null;
 
+  const formatDate = (val) => {
+    if (!val) return '—';
+    if (val instanceof Date) return val.toLocaleDateString();
+    if (typeof val === 'string') {
+      if (val.match(/^\d{4}-\d{2}-\d{2}/)) {
+        const d = new Date(val);
+        if (!isNaN(d.getTime())) {
+          return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+        }
+      }
+    }
+    return val;
+  };
+
   const DetailSection = ({ title, fields }) => (
-    <div style={{ marginBottom: '24px' }}>
-      <h4 style={{ 
-        fontSize: '0.75rem', 
-        fontWeight: '700', 
-        color: '#64748B', 
-        textTransform: 'uppercase', 
-        letterSpacing: '0.05em',
-        marginBottom: '12px',
-        paddingBottom: '6px',
-        borderBottom: '1px solid #E2E8F0'
-      }}>
+    <div className="detail-section">
+      <h4 className="detail-section-title">
         {title}
       </h4>
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-        gap: '16px' 
-      }}>
+      <div className="detail-grid">
         {fields.map((f, i) => (
-          <div key={i}>
-            <label style={{ fontSize: '0.72rem', color: '#94A3B8', display: 'block', marginBottom: '2px' }}>
-              {f.label}
-            </label>
-            <p style={{ fontSize: '0.9rem', color: '#1E293B', fontWeight: '600', margin: 0 }}>
-              {data[f.key] !== undefined && data[f.key] !== '' ? data[f.key] : '—'}
-            </p>
+          <div key={i} className="detail-field">
+            <label>{f.label}</label>
+            <p>{data[f.key] !== undefined && data[f.key] !== '' ? formatDate(data[f.key]) : '—'}</p>
           </div>
         ))}
       </div>
@@ -61,7 +61,7 @@ const RecordDetails = ({ data, type }) => {
       { label: 'Extra Hours', key: 'extraHours' },
       { label: 'Extra Hour Fee', key: 'extraHourFee' },
       { label: 'Transport Fee', key: 'transportFee' },
-      { label: 'Diesel Cost', key: 'dieselCost' },
+      { label: 'Fuel Cost', key: 'dieselCost' },
       { label: 'Commission', key: 'commission' },
       { label: 'Total Amount', key: 'totalAmount_disp' }
     ]},
@@ -72,34 +72,133 @@ const RecordDetails = ({ data, type }) => {
   ];
 
   const paymentFields = [
-    { title: 'Payment Information', fields: [
+    { title: 'Job Information', fields: [
+      { label: 'Date',          key: 'date' },
+      { label: 'Company',       key: 'client' },
+      { label: 'Vehicle No',    key: 'vehicle' },
+      { label: 'Location',      key: 'location' },
+    ]},
+    { title: 'Time Tracking', fields: [
+      { label: 'Start Time',       key: 'startTime' },
+      { label: 'End Time',         key: 'endTime' },
+      { label: 'Rest Time (min)',   key: 'restTime' },
+      { label: 'Total Hours',      key: 'totalHours' },
+      { label: 'Minimum Hours',    key: 'minimumHours' },
+      { label: 'Hours in Bill',    key: 'hoursInBill' },
+    ]},
+    { title: 'Financial Breakdown', fields: [
+      { label: 'Hire Amount',    key: 'hireAmount' },
+      { label: 'Commission',     key: 'commission' },
+      { label: 'Day Payment',    key: 'dayPayment' },
+      { label: 'Taken Amount',   key: 'takenAmount' },
+      { label: 'Balance',        key: 'balance' },
+      { label: 'Status',         key: 'status_text' },
+    ]},
+  ];
+
+  const invoiceFields = [
+    { title: 'Billing Details', fields: [
+      { label: 'Invoice Number', key: 'invoiceNo' },
       { label: 'Date', key: 'date' },
-      { label: 'Client', key: 'client' },
-      { label: 'Vehicle', key: 'vehicle' },
-      { label: 'Location', key: 'location' },
-      { label: 'Driver', key: 'driverName' }
+      { label: 'Client', key: 'clientName' },
+      { label: 'Site', key: 'site' },
+      { label: 'Vehicle', key: 'vehicleNo' }
     ]},
-    { title: 'Hire Reference Details', fields: [
-      { label: 'Start Time', key: 'startTime' },
-      { label: 'End Time', key: 'endTime' },
-      { label: 'Total Hours', key: 'totalHours' },
-      { label: 'Minimum Hours', key: 'minimumHours' },
-      { label: 'Hours in Bill', key: 'hoursInBill' }
+    { title: 'Job Description', fields: [
+      { label: 'Description', key: 'jobDescription' }
     ]},
-    { title: 'Financial Totals', fields: [
-      { label: 'Hire Amount', key: 'hireAmount' },
-      { label: 'Commission', key: 'commission' },
-      { label: 'Day Payment', key: 'dayPayment' },
-      { label: 'Taken Amount', key: 'takenAmount' },
-      { label: 'Balance', key: 'balance' },
-      { label: 'Status', key: 'status_text' }
+    { title: 'Pricing Breakdown', fields: [
+      { label: 'Units', key: 'totalUnits' },
+      { label: 'Unit Type', key: 'unitType' },
+      { label: 'Rate / Unit', key: 'ratePerUnit' },
+      { label: 'Transport', key: 'transportCharge' },
+      { label: 'Other Charges', key: 'otherCharges' },
+      { label: 'Other Desc', key: 'otherChargesDescription' },
+      { label: 'Grand Total', key: 'totalAmount' },
+      { label: 'Status', key: 'status' }
     ]}
   ];
 
-  const sections = type === 'hire' ? hireFields : paymentFields;
+  const quotationFields = [
+    { title: 'Quotation Basics', fields: [
+      { label: 'Quote Number', key: 'quotationNo' },
+      { label: 'Date', key: 'date' },
+      { label: 'Client Name', key: 'clientName' },
+      { label: 'Validity', key: 'validityDays' }
+    ]},
+    { title: 'Vehicle Specifications', fields: [
+      { label: 'Vehicle Type', key: 'vehicleType' },
+      { label: 'Vehicle No', key: 'vehicleNo' },
+      { label: 'Max Height', key: 'maxHeight' },
+      { label: 'Max Weight', key: 'maxWeight' }
+    ]},
+    { title: 'Pricing Offer', fields: [
+      { label: 'Min Charge', key: 'mandatoryCharge' },
+      { label: 'Transport', key: 'transportCharge' },
+      { label: 'Extra Hr Rate', key: 'extraHourRate' },
+      { label: 'Estimated Total', key: 'estimatedTotal' },
+      { label: 'Status', key: 'status' }
+    ]},
+    { title: 'Terms & Conditions', fields: [
+      { label: 'Terms', key: 'termsAndConditions' }
+    ]}
+  ];
+
+  const dieselFields = [
+    { title: 'Fueling Details', fields: [
+      { label: 'Date', key: 'date' },
+      { label: 'Vehicle', key: 'vehicle' },
+      { label: 'Driver / Staff', key: 'employee' }
+    ]},
+    { title: 'Consumption', fields: [
+      { label: 'Liters', key: 'liters' },
+      { label: 'Price / L', key: 'pricePerLiter' },
+      { label: 'Total Cost', key: 'total' },
+      { label: 'Odometer', key: 'odometer' }
+    ]},
+    { title: 'Management', fields: [
+      { label: 'Notes', key: 'note' },
+      { label: 'Status', key: 'status' }
+    ]}
+  ];
+  
+  const salaryFields = [
+    { title: 'Employee Information', fields: [
+      { label: 'Pay Month', key: 'month' },
+      { label: 'Employee Name', key: 'employee' },
+      { label: 'Primary Vehicle', key: 'vehicle' }
+    ]},
+    { title: 'Financial Breakdown', fields: [
+      { label: 'Basic Salary', key: 'basic' },
+      { label: 'Incentives / Bonuses', key: 'incentive' },
+      { label: 'Advance Deductions', key: 'advance' },
+      { label: 'Net Payable Amount', key: 'netPay' }
+    ]}
+  ];
+
+  const sectionsMap = {
+    'hire': hireFields,
+    'payment': paymentFields,
+    'diesel': dieselFields,
+    'invoice': invoiceFields,
+    'quotation': quotationFields,
+    'salary': salaryFields
+  };
+
+  const sections = sectionsMap[type] || [];
 
   return (
-    <div style={{ padding: '24px', maxHeight: '70vh', overflowY: 'auto' }}>
+    <div className="details-overlay">
+      {(type === 'invoice' || type === 'quotation') && (
+        <div className="detail-actions-header">
+          <button 
+            className="download-pdf-btn" 
+            onClick={() => type === 'invoice' ? generateInvoicePDF(data) : generateQuotationPDF(data)}
+          >
+            <Download size={18} /> <span>Download Professional PDF</span>
+          </button>
+        </div>
+      )}
       {sections.map((s, i) => <DetailSection key={i} title={s.title} fields={s.fields} />)}
     </div>
   );

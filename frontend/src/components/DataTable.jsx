@@ -3,9 +3,9 @@ import './DataTable.css';
 
 const DataTable = ({ columns, data, emptyMessage, loading, onRowClick }) => {
   return (
-    <div className="table-container">
-      <div className="custom-table-wrapper">
-        <table className="custom-table">
+    <div className="table-wrapper">
+      <div className="data-table-root">
+        <table className="data-table">
           <thead>
             <tr>
               {columns.map((col, index) => (
@@ -31,68 +31,105 @@ const DataTable = ({ columns, data, emptyMessage, loading, onRowClick }) => {
                     // Field mapping logic
                     const fieldMap = {
                       'DATE': 'date',
-                      'CLIENT': 'client',
-                      'VEHICLE': 'vehicle',
+                      'CLIENT': 'clientName',
+                      'COMPANY': 'clientName',
+                      'CLIENT NAME': 'name',
+                      'VEHICLE': 'vehicleNo',
+                      'VEHICLE NUMBER': 'number',
+                      'VEHICLE TYPE': 'vehicleType',
                       'LOCATION': 'location',
+                      'SITE': 'site',
                       'AMOUNT': 'amount',
-                      'COMMISSION': 'commission',
-                      'BILL#': 'billNumber',
-                      'MONTH': 'month',
-                      'EMPLOYEE': 'employee',
-                      'BASIC': 'basic',
-                      'INCENTIVE': 'incentive',
-                      'ADVANCE': 'advance',
+                      'TOTAL': 'totalAmount_disp',
+                      'TOTAL COST': 'totalCost',
+                      'EST. TOTAL': 'total_disp',
                       'NET PAY': 'netPay',
                       'PAID': 'paidAmount',
                       'ACTION': 'action',
-                      'LITERS': 'liters',
-                      'PRICE/L': 'pricePerLiter_disp',
-                      'TOTAL': 'total',
-                      'ODOMETER': 'odometer',
-                      'NOTE': 'note',
-                      'HIRE AMT': 'hireAmount',
-                      'PAID AMT': 'paidAmount',
-                      'BALANCE': 'balance',
-                      'STATUS': 'status',
-                      'CLIENT NAME': 'name',
+                      'STATUS': 'status_disp',
+                      'BILL#': 'billNumber',
+                      'INVOICE#': 'invoiceNo',
+                      'INV#': 'invoiceNo',
+                      'QUOTE#': 'quotationNo',
+                      'QUOTATION#': 'quotationNo',
+                      'VALIDITY': 'validity_disp',
+                      'EMPLOYEE': 'name',
+                      'DRIVER': 'driverName',
+                      'HELPER': 'helperName',
                       'CONTACT': 'contact',
-                      'TOTAL HIRES': 'totalHires',
-                      'OUTSTANDING': 'outstanding',
-                      'VEHICLE NUMBER': 'number',
-                      'NAME': 'name',
-                      'NIC': 'nic',
                       'ROLE': 'role',
                       'JOINED': 'joined',
-                      // Hire Book - New Fields
-                      'COMPANY': 'client',
-                      'DRIVER': 'driverName',
-                      'HOURS': 'workingHours',
-                      'BILL AMT': 'billAmount',
-                      'TOTAL': 'totalAmount_disp',
-                      // Payment Book - New Fields
+                      'BASIC': 'basic',
+                      'INCENTIVE': 'incentive',
+                      'ADVANCE': 'advance',
+                      'FUEL TYPE': 'fuelType_disp',
+                      'LITERS': 'liters',
+                      'PRICE/L': 'pricePerLiter_disp',
+                      'ODOMETER': 'odometer',
+                      'NOTE': 'note',
+                      'HIRE AMT':    'hireAmount',
+                      'PAID AMT':    'paidAmount',
+                      'BALANCE':     'balance',
+                      'COMMISSION':  'commission',
+                      'DAY PAY':     'dayPayment',
+                      'TAKEN':       'takenAmount',
+                      'START':       'startTime',
+                      'END':         'endTime',
+                      'REST':        'restTime',
+                      'TOTAL HRS':   'totalHours',
+                      'MIN HRS':     'minimumHours',
+                      'HRS IN BILL': 'hoursInBill',
                       'TOTAL HOURS': 'totalHours',
-                      'MIN HRS': 'minimumHours',
-                      'HOURS IN BILL': 'hoursInBill',
-                      'COMMISSION': 'commission',
-                      'DAY PAY': 'dayPayment',
-                      'TAKEN': 'takenAmount',
-                      'START': 'startTime',
-                      'END': 'endTime',
-                      'REST': 'restTime',
-                      'D COST': 'dieselCost',
-                      'COMM': 'commission',
-                      'REMARKS': 'details',
-                      'HELPER': 'helperName',
-                      'TS#': 'timeSheetNumber',
-                      'UNITS': 'totalUnits',
-                      'RATE': 'ratePerUnit',
-                      'TRANSPORT': 'transportCharge',
-                      'DESCRIPTION': 'jobDescription',
-                      'SITE': 'site'
+                      'HOURS IN BILL':'hoursInBill',
+                      'TOTAL HIRES': 'totalHires',
+                      'OUTSTANDING': 'outstanding',
+                      'NAME':        'name',
+                      'NIC':         'nic',
+                      'HOURS':       'workingHours',
+                      'BILL AMT':    'billAmount'
                     };
                     
-                    const keyToUse = fieldMap[col] || col.toLowerCase();
-                    const value = row[keyToUse];
+                    // Priority: Explicit Map -> Exact Column Key -> Lowercase Column Key
+                    let keyToUse = fieldMap[col] || (row[col] ? col : col.toLowerCase());
+                    let value = row[keyToUse];
+
+                    // Smart Fallbacks for Client/Company fields
+                    if ((col === 'CLIENT' || col === 'COMPANY') && (value === undefined || value === '—' || value === null)) {
+                      value = row.clientName || row.client || row.name || '—';
+                    }
+                    // Smart Fallbacks for Status
+                    if (col === 'STATUS' && (value === undefined || value === null)) {
+                      value = row.status_disp || row.status || '—';
+                    }
+                    // Smart Fallbacks for Vehicle
+                    if (col === 'VEHICLE' && (value === undefined || value === null)) {
+                      value = row.vehicleNo || row.vehicle || '—';
+                    }
+                    if (col === 'LOCATION' && (value === undefined || value === '—' || value === null)) {
+                      value = row.location || row.site || '—';
+                    }
+                    // Smart Fallbacks for Date
+                    if (col === 'DATE') {
+                      let rawDate = value;
+                      if (rawDate === undefined || rawDate === null) {
+                        rawDate = row.date_disp || row.date;
+                      }
+                      
+                      if (typeof rawDate === 'string' && rawDate.match(/^\d{4}-\d{2}-\d{2}T/)) {
+                        const d = new Date(rawDate);
+                        if (!isNaN(d.getTime())) {
+                          value = d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+                        } else {
+                          value = rawDate;
+                        }
+                      } else {
+                        value = rawDate || '—';
+                      }
+                    }
+                    // Smart Fallbacks for Driver/Employee
+                    if ((col === 'DRIVER' || col === 'EMPLOYEE') && (value === undefined || value === '—' || value === null)) {
+                      value = row.driverName || row.employee || row.name || '—';
+                    }
                     
                     return (
                       <td key={colIndex}>

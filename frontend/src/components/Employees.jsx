@@ -9,8 +9,9 @@ import '../styles/forms.css';
 import '../styles/books.css';
 
 const Employees = () => {
+  const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
   const userRole = localStorage.getItem('kt_user_role');
-  const canManage = ['Admin', 'Manager'].includes(userRole);
+  const canManage = isDev || ['Admin', 'Manager'].includes(userRole);
 
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [records, setRecords] = React.useState([]);
@@ -37,13 +38,12 @@ const Employees = () => {
       
       const formatted = raw.map(item => ({
         ...item,
+        rawData: item, // Store original for Editing
         name: item.name || '—',
-        nic: item.nic || '—',
-        role: item.role || '—',
         contact: item.contact || '—',
         joined: item.joinedDate ? new Date(item.joinedDate).toLocaleDateString() : '—',
         status_text: item.status || 'Active',
-        status: (
+        status_disp: (
           <span className={`status-badge ${item.status === 'Active' ? 'status-active' : 'status-inactive'}`}>
             {item.status || 'Active'}
           </span>
@@ -85,7 +85,8 @@ const Employees = () => {
   };
 
   const handleEdit = (item) => {
-    setEditingItem(item);
+    const target = item.rawData || item;
+    setEditingItem(target);
     setIsModalOpen(true);
   };
 

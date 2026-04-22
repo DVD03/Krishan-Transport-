@@ -12,7 +12,8 @@ import VehicleFilter from './VehicleFilter';
 
 const HireBook = () => {
   const userRole = localStorage.getItem('kt_user_role');
-  const canManage = ['Admin', 'Manager'].includes(userRole);
+  const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const canManage = isDev || ['Admin', 'Manager'].includes(userRole);
 
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [viewModalOpen, setViewModalOpen] = React.useState(false);
@@ -49,6 +50,7 @@ const HireBook = () => {
       const rawData = Array.isArray(response.data) ? response.data : [];
       const formatted = rawData.map(item => ({
         ...item,
+        rawData:    item, // Store original for Editing
         date:       new Date(item.date).toLocaleDateString(),
         billNumber: item.billNumber || '—',
         timeSheetNumber: item.timeSheetNumber || '—',
@@ -69,10 +71,10 @@ const HireBook = () => {
         totalAmount_disp: `LKR ${(item.totalAmount || 0).toLocaleString()}`,
         details:    item.details || '—',
         status_text: item.status || 'Pending',
-        status: (
-            <span className={`status-badge ${item.status === 'Completed' ? 'status-active' : 'status-pending'}`}>
-                {item.status || 'Pending'}
-            </span>
+        status_disp: (
+          <span className={`status-badge ${item.status === 'Completed' ? 'status-active' : 'status-pending'}`}>
+            {item.status || 'Pending'}
+          </span>
         ),
         action: (
           <div className="table-actions" onClick={e => e.stopPropagation()}>
@@ -131,7 +133,8 @@ const HireBook = () => {
   };
 
   const handleEdit = (item) => {
-    setEditingItem(item);
+    const target = item.rawData || item;
+    setEditingItem(target);
     setIsModalOpen(true);
   };
 

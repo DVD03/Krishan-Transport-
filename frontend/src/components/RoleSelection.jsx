@@ -2,6 +2,7 @@ import React from 'react';
 import { ShieldCheck, Users, HardHat } from 'lucide-react';
 import './RoleSelection.css';
 import logo from '../logo.png';
+import transportBg from '../assets/transport_bg.png';
 
 const RoleSelection = ({ onRoleSelect }) => {
   const roles = [
@@ -32,42 +33,45 @@ const RoleSelection = ({ onRoleSelect }) => {
   ];
 
   return (
-    <div className="landing-container">
-      <div className="landing-overlay"></div>
-      <div className="landing-content">
-        <header className="landing-header">
-          <img src={logo} alt="Krishan Transport Logo" className="landing-logo" />
-          <h1>Krishan Transport</h1>
-          <p>Management & Logistics Portal</p>
-        </header>
+    <div className="premium-auth-context">
+      <div className="landing-container" style={{ backgroundImage: `url(${transportBg})` }}>
+        <div className="landing-overlay"></div>
+        <div className="landing-content-wrapper">
+          <div className="landing-content">
+          <header className="landing-header">
+            <img src={logo} alt="Krishan Transport Logo" className="landing-logo" />
+            <h1>Krishan Transport</h1>
+            <p>Management & Logistics Portal</p>
+          </header>
 
-        <div className="role-grid">
-          {roles.map((role) => {
-            const Icon = role.icon;
-            return (
-              <div 
-                key={role.id} 
-                className="role-card" 
-                onClick={() => onRoleSelect(role.id)}
-                style={{ '--accent': role.color, '--bg-subtle': role.bg }}
-              >
-                <div className="role-icon-wrapper">
-                  <Icon size={32} />
+          <div className="role-grid">
+            {roles.map((role) => {
+              const Icon = role.icon;
+              return (
+                <div 
+                  key={role.id} 
+                  className="role-card" 
+                  onClick={() => onRoleSelect(role.id)}
+                  style={{ '--accent': role.color, '--bg-subtle': role.bg }}
+                >
+                  <div className="role-icon-wrapper">
+                    <Icon size={32} />
+                  </div>
+                  <h3>{role.title}</h3>
+                  <p>{role.desc}</p>
+                  <div className="role-action">
+                    <span>Enter Portal</span>
+                    <div className="arrow">→</div>
+                  </div>
                 </div>
-                <h3>{role.title}</h3>
-                <p>{role.desc}</p>
-                <div className="role-action">
-                  <span>Enter Portal</span>
-                  <div className="arrow">→</div>
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
+          <footer className="landing-footer">
+            <p>© {new Date().getFullYear()} Krishan Transport Management System. All rights reserved.</p>
+          </footer>
+          </div>
         </div>
-
-        <footer className="landing-footer">
-          <p>© {new Date().getFullYear()} Krishan Transport Management System. All rights reserved.</p>
-        </footer>
       </div>
     </div>
   );

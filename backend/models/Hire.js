@@ -35,7 +35,7 @@ const HireSchema = new mongoose.Schema({
   totalAmount:      { type: Number, default: 0 },
   details:          { type: String },
   
-  status: { type: String, enum: ['Pending', 'Paid'], default: 'Pending' }
+  status: { type: String, enum: ['Pending', 'Completed', 'Paid'], default: 'Pending' }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Hire', HireSchema);

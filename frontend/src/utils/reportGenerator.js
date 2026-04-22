@@ -3,7 +3,20 @@ import autoTable from 'jspdf-autotable';
 import logoUrl from '../logo.png';
 
 export const generatePDFReport = ({ title, columns, data, filename }) => {
-  const doc = new jsPDF();
+  // Auto-detect orientation based on column count
+  // If more than 8 columns, we use Landscape to prevent squashing
+  const isLandscape = columns.length > 8;
+  const doc = new jsPDF({
+    orientation: isLandscape ? 'landscape' : 'portrait',
+    unit: 'mm',
+    format: 'a4'
+  });
+
+  // Calculate dynamic font size based on column density
+  let fontSize = 9;
+  if (columns.length > 15) fontSize = 6;
+  else if (columns.length > 12) fontSize = 7;
+  else if (columns.length > 8) fontSize = 8;
   
   const drawReportContent = (logoBase64, imgW = 0, imgH = 0) => {
     // ---- HEADER ----
@@ -61,8 +74,8 @@ export const generatePDFReport = ({ title, columns, data, filename }) => {
       body: data,
       theme: 'grid',
       styles: { 
-        fontSize: 9, 
-        cellPadding: 4,
+        fontSize: fontSize, 
+        cellPadding: isLandscape ? 2 : 4,
         font: 'helvetica',
         lineColor: [220, 220, 220],
         lineWidth: 0.1,

@@ -8,13 +8,18 @@ import { Download, Search } from 'lucide-react';
 import '../styles/forms.css';
 import '../styles/books.css';
 import VehicleFilter from './VehicleFilter';
+import RecordDetails from './RecordDetails';
 
 const SalaryBook = () => {
+  const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
   const userRole = localStorage.getItem('kt_user_role');
-  const canManage = ['Admin', 'Manager'].includes(userRole);
+  const canManage = isDev || ['Admin', 'Manager'].includes(userRole);
 
   const [isModalOpen, setIsModalOpen] = React.useState(false);
   const [salaryRecords, setSalaryRecords] = React.useState([]);
+  const [viewModalOpen, setViewModalOpen] = React.useState(false);
+  const [selectedRecord, setSelectedRecord] = React.useState(null);
+  
   const [vehicles, setVehicles] = React.useState([]);
   const [selectedVehicle, setSelectedVehicle] = React.useState(null);
   const [loading, setLoading] = React.useState(true);
@@ -46,11 +51,10 @@ const SalaryBook = () => {
       const rawData = Array.isArray(response.data) ? response.data : [];
       const formatted = rawData.map(item => ({
         ...item,
-        net_val: item.netPay,
-        basic: `LKR ${(item.basic || 0).toLocaleString()}`,
-        incentive: `LKR ${(item.incentive || 0).toLocaleString()}`,
-        advance: `LKR ${(item.advance || 0).toLocaleString()}`,
+        rawData: item, // Store original for Editing
+        netPay_val: item.netPay || 0,
         netPay: `LKR ${Number(item.netPay || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,
+        netPay_disp: `LKR ${Number(item.netPay || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`,
         action: canManage ? (
           <div className="table-actions">
             <button className="edit-btn" onClick={() => handleEdit(item)}>Edit</button>
@@ -103,7 +107,13 @@ const SalaryBook = () => {
   };
 
   const handleEdit = (item) => {
-    setEditingItem(item);
+    const target = item.rawData || item;
+    setEditingItem(target);
+    setIsModalOpen(true);
+  };
+
+  const handleAddNew = () => {
+    setEditingItem(null);
     setIsModalOpen(true);
   };
 
@@ -119,6 +129,11 @@ const SalaryBook = () => {
         setTimeout(() => setError(null), 5000);
       }
     }
+  };
+
+  const handleRowClick = (record) => {
+    setSelectedRecord(record);
+    setViewModalOpen(true);
   };
 
   const handleExportPDF = () => {
@@ -175,7 +190,7 @@ const SalaryBook = () => {
             <Download size={16} /> Export PDF
           </button>
           {canManage && (
-            <button className="add-btn" onClick={() => { setEditingItem(null); setIsModalOpen(true); }}>
+            <button className="add-btn" onClick={handleAddNew}>
               + Add Record
             </button>
           )}
@@ -189,8 +204,23 @@ const SalaryBook = () => {
         columns={columns} 
         data={filteredRecords} 
         loading={loading}
+        onRowClick={handleRowClick}
         emptyMessage={loading ? "Loading..." : "No salary records found."} 
       />
+
+      {/* Salary Details Modal */}
+      <Modal 
+        isOpen={viewModalOpen} 
+        onClose={() => setViewModalOpen(false)} 
+        title="Salary Payment Details"
+      >
+        <div style={{ padding: '0px' }}>
+          <RecordDetails data={selectedRecord} type="salary" />
+          <div className="modal-footer" style={{ padding: '15px 24px', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end', background: '#F8FAFC' }}>
+              <button className="secondary-btn" onClick={() => setViewModalOpen(false)}>Close</button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal 
         isOpen={isModalOpen} 

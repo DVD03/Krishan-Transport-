@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://krishan-transport-backend.vercel.app/api';
+const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const API_URL = import.meta.env.VITE_API_URL || (isLocal ? 'http://localhost:5000/api' : 'https://krishan-transport-backend.vercel.app/api');
 
 const api = axios.create({
   baseURL: API_URL,
@@ -101,12 +102,15 @@ const wrapAPI = (endpoint, storageKey) => ({
   }
 });
 
-export const dieselAPI = wrapAPI('/diesel', 'kt_diesel');
-export const hireAPI = wrapAPI('/hires', 'kt_hires');
-export const salaryAPI = wrapAPI('/salaries', 'kt_salaries');
-export const paymentAPI = wrapAPI('/payments', 'kt_payments');
-export const clientAPI = wrapAPI('/clients', 'kt_clients');
-export const vehicleAPI = wrapAPI('/vehicles', 'kt_vehicles');
-export const employeeAPI = wrapAPI('/employees', 'kt_employees');
+export const dieselAPI     = wrapAPI('/diesel',     'kt_diesel');
+export const hireAPI       = wrapAPI('/hires',      'kt_hires');
+export const salaryAPI     = wrapAPI('/salaries',   'kt_salaries');
+export const paymentAPI    = wrapAPI('/payments',   'kt_payments');
+export const clientAPI     = wrapAPI('/clients',    'kt_clients');
+export const vehicleAPI    = wrapAPI('/vehicles',   'kt_vehicles');
+export const employeeAPI   = wrapAPI('/employees',  'kt_employees');
+export const invoiceAPI    = wrapAPI('/invoices',   'kt_invoices');
+export const quotationAPI  = wrapAPI('/quotations', 'kt_quotations');
 
 export default api;
+
