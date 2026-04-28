@@ -1,12 +1,104 @@
 import React from 'react';
 import DataTable from './DataTable';
 import Modal from './Modal';
-import { vehicleAPI } from '../services/api';
+import { vehicleAPI, markLeasePayment } from '../services/api';
 import { generatePDFReport } from '../utils/reportGenerator';
-import { Download, Search, RefreshCw, PlusCircle } from 'lucide-react';
+import { Download, Search, RefreshCw, PlusCircle, CheckCircle, XCircle, CreditCard } from 'lucide-react';
 import '../styles/forms.css';
 import '../styles/books.css';
 import RecordDetails from './RecordDetails';
+
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+const LeasingBook = ({ vehicles, onPaymentToggle }) => {
+  const now = new Date();
+  const [selYear, setSelYear] = React.useState(now.getFullYear());
+  const leasingVehicles = vehicles.filter(v => v.rawData?.hasLeasing);
+
+  if (leasingVehicles.length === 0) {
+    return (
+      <div style={{ padding: '40px', textAlign: 'center', color: '#94A3B8' }}>
+        <CreditCard size={40} style={{ opacity: 0.3, marginBottom: '12px' }} />
+        <p style={{ fontWeight: 600 }}>No vehicles with active leasing found.</p>
+      </div>
+    );
+  }
+
+  const years = Array.from({ length: 5 }, (_, i) => now.getFullYear() - i);
+  const totalPaid = leasingVehicles.reduce((sum, v) => {
+    const paidMonths = (v.rawData?.leasePayments || []).filter(lp => lp.year === selYear && lp.paid).length;
+    return sum + paidMonths * (parseFloat(v.rawData?.monthlyPremium) || 0);
+  }, 0);
+  const totalPending = leasingVehicles.reduce((sum, v) => {
+    const paidMonths = (v.rawData?.leasePayments || []).filter(lp => lp.year === selYear && lp.paid).length;
+    const totalMonths = selYear < now.getFullYear() ? 12 : now.getMonth() + 1;
+    return sum + (totalMonths - paidMonths) * (parseFloat(v.rawData?.monthlyPremium) || 0);
+  }, 0);
+
+  return (
+    <div style={{ padding: '20px' }}>
+      {/* Summary & Year selector */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+        <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+          <div style={{ background: '#D1FAE5', borderRadius: '12px', padding: '12px 20px' }}>
+            <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#065F46', textTransform: 'uppercase' }}>Paid This Year</div>
+            <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#059669' }}>LKR {totalPaid.toLocaleString()}</div>
+          </div>
+          <div style={{ background: '#FEE2E2', borderRadius: '12px', padding: '12px 20px' }}>
+            <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#991B1B', textTransform: 'uppercase' }}>Pending This Year</div>
+            <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#DC2626' }}>LKR {totalPending.toLocaleString()}</div>
+          </div>
+        </div>
+        <select value={selYear} onChange={e => setSelYear(Number(e.target.value))}
+          style={{ padding: '8px 14px', borderRadius: '10px', border: '1px solid #E2E8F0', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}>
+          {years.map(y => <option key={y} value={y}>{y}</option>)}
+        </select>
+      </div>
+
+      {/* Per-vehicle table */}
+      {leasingVehicles.map(v => {
+        const rd = v.rawData || {};
+        const payments = rd.leasePayments || [];
+        return (
+          <div key={v._id} style={{ background: 'white', borderRadius: '16px', border: '1px solid #E2E8F0', marginBottom: '16px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+            <div style={{ padding: '14px 20px', background: 'linear-gradient(135deg, #EFF6FF, #DBEAFE)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontWeight: 800, color: '#1E293B', fontSize: '1rem' }}>{rd.number}</div>
+                <div style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500 }}>{rd.leasingCompany || 'Unknown Company'} · LKR {parseFloat(rd.monthlyPremium || 0).toLocaleString()}/month</div>
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#2563EB', fontWeight: 700 }}>Due Day: {rd.leaseDueDate || '—'}</div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '8px', padding: '16px' }}>
+              {MONTHS.map((mName, mIdx) => {
+                const month = mIdx + 1;
+                const entry = payments.find(lp => lp.year === selYear && lp.month === month);
+                const isPaid = entry?.paid || false;
+                const isFuture = selYear === now.getFullYear() && month > now.getMonth() + 1;
+                return (
+                  <button key={month} disabled={isFuture}
+                    onClick={() => onPaymentToggle(rd._id, selYear, month, !isPaid)}
+                    style={{
+                      padding: '10px 6px', borderRadius: '10px', border: 'none', cursor: isFuture ? 'default' : 'pointer',
+                      background: isFuture ? '#F8FAFC' : isPaid ? '#D1FAE5' : '#FEF2F2',
+                      color: isFuture ? '#CBD5E1' : isPaid ? '#059669' : '#DC2626',
+                      fontWeight: 700, fontSize: '0.72rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px',
+                      transition: 'all 0.2s ease', opacity: isFuture ? 0.5 : 1,
+                      boxShadow: isPaid ? '0 0 0 1px #6EE7B7' : isFuture ? 'none' : '0 0 0 1px #FCA5A5'
+                    }}>
+                    <span>{mName}</span>
+                    {isFuture ? <span style={{ fontSize: '0.6rem' }}>—</span>
+                      : isPaid ? <CheckCircle size={14} /> : <XCircle size={14} />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 
 const VehicleForm = ({ onSubmit, onCancel, initialData }) => {
   const [formData, setFormData] = React.useState(initialData || { number: '', model: '', type: '', fuelType: 'Diesel', status: 'Active' });
@@ -234,6 +326,7 @@ const Vehicles = () => {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [successMsg, setSuccessMsg] = React.useState('');
   const [errorMsg, setErrorMsg] = React.useState('');
+  const [activeTab, setActiveTab] = React.useState('fleet');
 
   const columns = canManage
     ? ['VEHICLE NUMBER', 'MODEL', 'TYPE', 'FUEL TYPE', 'STATUS', 'ACTION']
@@ -335,6 +428,18 @@ const Vehicles = () => {
     }
   };
 
+  const handlePaymentToggle = async (vehicleId, year, month, paid) => {
+    try {
+      await markLeasePayment(vehicleId, year, month, paid);
+      setSuccessMsg(paid ? 'Lease marked as Paid ✓' : 'Lease marked as Unpaid');
+      fetchVehicles();
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (err) {
+      setErrorMsg('Failed to update lease payment');
+      setTimeout(() => setErrorMsg(''), 3000);
+    }
+  };
+
   const handleExportPDF = () => {
     const exportColumns = ['VEHICLE NUMBER', 'MODEL', 'TYPE', 'FUEL TYPE', 'STATUS'];
     const exportData = filteredRecords.map(v => [
@@ -366,6 +471,20 @@ const Vehicles = () => {
         </div>
       </div>
 
+      {/* Tab Navigation */}
+      <div style={{ display: 'flex', gap: '8px', padding: '0 20px 16px', borderBottom: '1px solid #E2E8F0' }}>
+        {[{id:'fleet',label:'Fleet List'},{id:'leasing',label:'Leasing Book'}].map(tab => (
+          <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+            style={{
+              padding: '8px 20px', borderRadius: '10px', border: 'none', cursor: 'pointer',
+              fontWeight: 700, fontSize: '0.82rem',
+              background: activeTab === tab.id ? '#2563EB' : '#F1F5F9',
+              color: activeTab === tab.id ? 'white' : '#64748B',
+              transition: 'all 0.2s ease'
+            }}>{tab.label}</button>
+        ))}
+      </div>
+
       <div className="book-filters">
         <div className="search-box">
           <Search className="search-icon" size={20} />
@@ -394,24 +513,31 @@ const Vehicles = () => {
       {successMsg && <div className="success-banner" style={{ margin: '0 20px 20px' }}>{successMsg}</div>}
       {errorMsg && <div className="error-banner" style={{ margin: '0 20px 20px' }}>{errorMsg}</div>}
 
-      <DataTable
-        columns={columns}
-        data={filteredRecords}
-        loading={loading}
-        onRowClick={(row) => { setSelectedRecord(row); setViewModalOpen(true); }}
-        emptyMessage={loading ? "Loading fleet data..." : "No vehicles registered."}
-      />
+      {activeTab === 'leasing' ? (
+        <LeasingBook vehicles={vehicleRecords} onPaymentToggle={handlePaymentToggle} />
+      ) : (
+        <>
+          <DataTable
+            columns={columns}
+            data={filteredRecords}
+            loading={loading}
+            onRowClick={(row) => { setSelectedRecord(row); setViewModalOpen(true); }}
+            emptyMessage={loading ? "Loading fleet data..." : "No vehicles registered."}
+          />
 
-      <Modal
-        isOpen={viewModalOpen}
-        onClose={() => setViewModalOpen(false)}
-        title="Vehicle Profile Details"
-      >
-        <RecordDetails data={selectedRecord} type="vehicle" />
-        <div className="modal-footer" style={{ padding: '15px 24px', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end', background: '#F8FAFC' }}>
-          <button className="secondary-btn" onClick={() => setViewModalOpen(false)}>Close</button>
-        </div>
-      </Modal>
+          <Modal
+            isOpen={viewModalOpen}
+            onClose={() => setViewModalOpen(false)}
+            title="Vehicle Profile Details"
+          >
+            <RecordDetails data={selectedRecord} type="vehicle" />
+            <div className="modal-footer" style={{ padding: '15px 24px', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end', background: '#F8FAFC' }}>
+              <button className="secondary-btn" onClick={() => setViewModalOpen(false)}>Close</button>
+            </div>
+          </Modal>
+        </>
+      )}
+
 
       <Modal
         isOpen={isModalOpen}

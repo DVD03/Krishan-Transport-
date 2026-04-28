@@ -230,8 +230,6 @@ const RecordDetails = ({ data, type }) => {
       { label: 'Vehicle Number', key: 'number' },
       { label: 'Vehicle Type', key: 'type' },
       { label: 'Model', key: 'model' },
-      { label: 'Engine Number', key: 'engineNumber' },
-      { label: 'Chassis Number', key: 'chassisNumber' }
     ]},
     { title: 'Leasing & Finance', fields: [
       { label: 'Leasing Status', key: 'hasLeasing' },
@@ -250,6 +248,27 @@ const RecordDetails = ({ data, type }) => {
     ]}
   ];
 
+  const extraIncomeFields = [
+
+    { title: 'Income Details', fields: [
+      { label: 'Date', key: 'date' },
+      { label: 'Description', key: 'description' },
+      { label: 'Category', key: 'category' },
+      { label: 'Amount', key: 'amount' },
+      { label: 'Notes', key: 'note' }
+    ]}
+  ];
+
+  const expenseFields = [
+    { title: 'Expense Details', fields: [
+      { label: 'Date', key: 'date' },
+      { label: 'Description', key: 'description' },
+      { label: 'Category', key: 'category' },
+      { label: 'Amount', key: 'amount' },
+      { label: 'Notes', key: 'note' }
+    ]}
+  ];
+
   const sectionsMap = {
     'hire': hireFields,
     'payment': paymentFields,
@@ -259,7 +278,9 @@ const RecordDetails = ({ data, type }) => {
     'salary': salaryFields,
     'employee': employeeFields,
     'client': clientFields,
-    'vehicle': vehicleFields
+    'vehicle': vehicleFields,
+    'extraIncome': extraIncomeFields,
+    'expense': expenseFields
   };
 
   const sections = sectionsMap[type] || [];

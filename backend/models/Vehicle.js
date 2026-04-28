@@ -14,6 +14,14 @@ const vehicleSchema = new mongoose.Schema({
   leaseDueDate: { type: Number }, // e.g., 20 (day of month)
   leaseFinalDate: { type: Date },
 
+  // Monthly Lease Payment Tracker: [{ year: 2025, month: 4, paid: true, paidDate: Date }]
+  leasePayments: [{
+    year:     { type: Number, required: true },
+    month:    { type: Number, required: true }, // 1–12
+    paid:     { type: Boolean, default: false },
+    paidDate: { type: Date }
+  }],
+
   // Compliance Dates
   insuranceEffectiveDate: { type: Date },
   insuranceExpirationDate: { type: Date },

@@ -127,6 +127,21 @@ export const salaryAPI     = wrapAPI('/salaries',   'kt_salaries');
 export const paymentAPI    = wrapAPI('/payments',   'kt_payments');
 export const clientAPI     = wrapAPI('/clients',    'kt_clients');
 export const vehicleAPI    = wrapAPI('/vehicles',   'kt_vehicles');
+export const markLeasePayment = async (vehicleId, year, month, paid) => {
+  const res = await api.patch(
+    `/vehicles/${vehicleId}/lease-payment`,
+    { year, month, paid }
+  );
+  // Update the kt_vehicles localStorage cache so Dashboard picks up the change instantly
+  const cached = JSON.parse(localStorage.getItem('kt_vehicles') || '[]');
+  const updated = cached.map(v =>
+    v._id === vehicleId ? res.data : v
+  );
+  localStorage.setItem('kt_vehicles', JSON.stringify(updated));
+  // Notify Dashboard to re-fetch
+  window.dispatchEvent(new Event('kt_lease_updated'));
+  return res;
+};
 export const employeeAPI   = wrapAPI('/employees',  'kt_employees');
 export const invoiceAPI    = wrapAPI('/invoices',   'kt_invoices');
 export const quotationAPI  = wrapAPI('/quotations', 'kt_quotations');

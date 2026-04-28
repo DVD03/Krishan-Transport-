@@ -54,13 +54,16 @@ const FinancialReport = () => {
     // Auto-refresh every 15 seconds silently
     const interval = setInterval(() => fetchAll(true), 15000);
 
-    // Refresh on window focus
+    // Refresh on window focus or lease payment toggle
     const handleFocus = () => fetchAll(true);
+    const handleLease = () => fetchAll(true);
     window.addEventListener('focus', handleFocus);
+    window.addEventListener('kt_lease_updated', handleLease);
 
     return () => {
       clearInterval(interval);
       window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('kt_lease_updated', handleLease);
     };
   }, []);
 
@@ -102,12 +105,26 @@ const FinancialReport = () => {
     const totalExtraIncome = fExtraIncome.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
     const totalOtherExp    = fExpenses.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
 
-    // Leasing Cost Calculation: assume monthly premium per vehicle if leasing is active
-    const monthlyLeaseSum = data.vehicles
+    // Leasing — only count months marked as PAID
+    const totalLeasing = data.vehicles
       .filter(v => v.hasLeasing && v.monthlyPremium)
-      .reduce((s, v) => s + parseFloat(v.monthlyPremium), 0);
-    
-    const totalLeasing = selectedMonth === 'All' ? (monthlyLeaseSum * 12) : monthlyLeaseSum;
+      .reduce((s, v) => {
+        const premium = parseFloat(v.monthlyPremium) || 0;
+        const payments = v.leasePayments || [];
+        if (selectedMonth === 'All') {
+          const paidMonths = payments.filter(lp =>
+            lp.year === parseInt(selectedYear) && lp.paid
+          ).length;
+          return s + paidMonths * premium;
+        } else {
+          const monthIdx = MONTHS.indexOf(selectedMonth) + 1;
+          const entry = payments.find(lp =>
+            lp.year === parseInt(selectedYear) && lp.month === monthIdx && lp.paid
+          );
+          return s + (entry ? premium : 0);
+        }
+      }, 0);
+
 
     const totalIncome   = totalHire + totalExtraIncome;
     const totalExpense  = totalDiesel + totalSalary + totalOtherExp + totalLeasing;

@@ -185,9 +185,15 @@ const Dashboard = ({ role, name }) => {
   useEffect(() => {
     const onV = () => { if (document.visibilityState === 'visible') fetchAll(true); };
     const onF = () => fetchAll(true);
+    const onLease = () => fetchAll(true); // re-fetch when lease payment toggled
     document.addEventListener('visibilitychange', onV);
     window.addEventListener('focus', onF);
-    return () => { document.removeEventListener('visibilitychange', onV); window.removeEventListener('focus', onF); };
+    window.addEventListener('kt_lease_updated', onLease);
+    return () => {
+      document.removeEventListener('visibilitychange', onV);
+      window.removeEventListener('focus', onF);
+      window.removeEventListener('kt_lease_updated', onLease);
+    };
   }, []);
 
   // Helper to filter by selected period
@@ -280,19 +286,39 @@ const Dashboard = ({ role, name }) => {
     const totalHireRevenue = fPayments.reduce((s, r) => s + (parseFloat(r.hireAmount)  || 0), 0);
     const totalCollected   = fPayments.reduce((s, r) => s + (parseFloat(r.takenAmount) || 0), 0);
     const totalBalance     = fPayments.reduce((s, r) => s + (parseFloat(r.balance)     || 0), 0);
-    const paidCount        = fPayments.filter(r => r.status === 'Paid').length;
-    const pendingCount     = fPayments.filter(r => r.status !== 'Paid').length;
     const totalDiesel      = fDiesel.reduce((s, r)   => s + (parseFloat(r.total)  || parseFloat(r.amount) || 0), 0);
     const totalSalary      = fSalaries.reduce((s, r) => s + (parseFloat(r.netPay) || 0), 0);
     const totalExpenses    = fExpenses.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
     const totalExtra       = fExtraIncome.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
-    
-    // Leasing Cost Calculation for current month
+
+    // Leasing Cost — only count months actually marked as PAID
     const totalLeasing = data.vehicles
       .filter(v => v.hasLeasing && v.monthlyPremium)
-      .reduce((s, v) => s + parseFloat(v.monthlyPremium), 0);
+      .reduce((s, v) => {
+        const premium = parseFloat(v.monthlyPremium) || 0;
+        const payments = v.leasePayments || [];
+        if (selectedMonth === 'All') {
+          // Sum all paid months in selected year
+          const paidMonths = payments.filter(lp =>
+            lp.year === parseInt(selectedYear) && lp.paid
+          ).length;
+          return s + paidMonths * premium;
+        } else {
+          // Check if this specific month is paid
+          const monthIdx = ['January','February','March','April','May','June',
+            'July','August','September','October','November','December'].indexOf(selectedMonth) + 1;
+          const entry = payments.find(lp =>
+            lp.year === parseInt(selectedYear) && lp.month === monthIdx && lp.paid
+          );
+          return s + (entry ? premium : 0);
+        }
+      }, 0);
 
-    const netProfit = (totalHireRevenue + totalExtra) - totalSalary - totalDiesel - totalLeasing - totalExpenses;
+    const totalRevenue = totalHireRevenue + totalExtra;
+    const totalOutgoings = totalSalary + totalDiesel + totalExpenses + totalLeasing;
+    const netProfit = totalRevenue - totalOutgoings;
+    const cashBalance = (totalCollected + totalExtra) - (totalSalary + totalDiesel + totalExpenses + totalLeasing);
+
 
     if (!isAdmin) {
       const myJobs = data.hires.filter(h => h.driverName?.trim().toLowerCase() === name?.trim().toLowerCase() || h.helperName?.trim().toLowerCase() === name?.trim().toLowerCase());
@@ -308,18 +334,26 @@ const Dashboard = ({ role, name }) => {
     }
 
     return [
-      { id: 1, title: 'Hire Revenue',        value: fmt(totalHireRevenue), subtext: `${data.payments.length} payment records`,         icon: TrendingUp, color: '#2563EB' },
-      { id: 2, title: 'Collected',           value: fmt(totalCollected),   subtext: `${paidCount} paid · ${pendingCount} outstanding`, icon: ArrowDown,  color: '#10B981' },
-      { id: 3, title: 'Outstanding Balance', value: fmt(totalBalance),     subtext: 'Receivable from clients',                        icon: Clock,      color: totalBalance > 0 ? '#DC2626' : '#10B981' },
-      { id: 4, title: 'Fuel Cost',           value: fmt(totalDiesel),      subtext: `${data.diesel.length} fuel entries`,             icon: Fuel,       color: '#F59E0B' },
-      { id: 5, title: 'Total Salaries',      value: fmt(totalSalary),      subtext: `${data.salaries.length} salary records`,        icon: Users,      color: '#8B5CF6' },
-      { id: 6, title: 'Net Profit (Est.)',   value: fmt(netProfit),        subtext: 'Revenue − Salaries − Diesel',                   icon: BarChart,   color: netProfit >= 0 ? '#10B981' : '#DC2626' },
+      { id: 1, title: 'Total Revenue',       value: fmt(totalRevenue),     subtext: `Hire: ${fmt(totalHireRevenue)} + Extra: ${fmt(totalExtra)}`, icon: TrendingUp, color: '#2563EB' },
+      { id: 2, title: 'Total Expenses',      value: fmt(totalOutgoings),    subtext: 'Salaries, Fuel, Lease & Others',             icon: ArrowDown,  color: '#EF4444' },
+      { id: 3, title: 'Net Profit (Est.)',   value: fmt(netProfit),        subtext: 'Total Revenue − Total Expenses',            icon: BarChart,   color: netProfit >= 0 ? '#10B981' : '#DC2626' },
+      { id: 4, title: 'Cash Collected',      value: fmt(totalCollected + totalExtra), subtext: `Payments: ${fmt(totalCollected)} + Extra: ${fmt(totalExtra)}`, icon: CheckCircle, color: '#059669' },
+      { id: 5, title: 'Cash Balance',        value: fmt(cashBalance),      subtext: 'Actual cash available (est.)',              icon: Wallet,     color: cashBalance >= 0 ? '#10B981' : '#DC2626' },
+      { id: 6, title: 'Outstanding',         value: fmt(totalBalance),     subtext: 'Receivable from clients',                    icon: Clock,      color: totalBalance > 0 ? '#F59E0B' : '#10B981' },
     ];
   }, [data, isAdmin, myTotalEarned, mySalaries.length, name]);
 
   const recentPayments = useMemo(() =>
     [...data.payments].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5),
   [data.payments]);
+
+  const recentTransactions = useMemo(() => {
+    const combined = [
+      ...data.extraIncome.map(ei => ({ ...ei, dataType: 'extraIncome', sortDate: new Date(ei.date) })),
+      ...data.expenses.map(ex => ({ ...ex, dataType: 'expense', sortDate: new Date(ex.date) }))
+    ];
+    return combined.sort((a, b) => b.sortDate - a.sortDate).slice(0, 5);
+  }, [data.extraIncome, data.expenses]);
 
   const recentHires = useMemo(() => {
     let filtered = [...data.hires];
@@ -599,6 +633,21 @@ const Dashboard = ({ role, name }) => {
                     </div>
                   ))}
                 </div>
+              ) : (
+                <div className="empty-state"><div className="empty-icon" /><p>No payments yet.</p></div>
+              )}
+            </div>
+          </div>
+
+          {/* Recent Hires activity */}
+          <div className="recent-activity">
+            <div className="section-header">
+              <h3>Recent Hires</h3>
+              <span style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 600 }}>Last 5 records</span>
+            </div>
+            <div className="activity-card">
+              {loading ? (
+                <div className="loading-state">Loading data…</div>
               ) : recentHires.length > 0 ? (
                 <div className="recent-list">
                   {recentHires.map((h, i) => (
@@ -615,7 +664,42 @@ const Dashboard = ({ role, name }) => {
                   ))}
                 </div>
               ) : (
-                <div className="empty-state"><div className="empty-icon" /><p>No activity yet.</p></div>
+                <div className="empty-state"><div className="empty-icon" /><p>No hire activity yet.</p></div>
+              )}
+            </div>
+          </div>
+
+          {/* Recent Financial Transactions activity */}
+          <div className="recent-activity">
+            <div className="section-header">
+              <h3>Other Income & Expenses</h3>
+              <span style={{ fontSize: '11px', color: '#94A3B8', fontWeight: 600 }}>Last 5 records</span>
+            </div>
+            <div className="activity-card">
+              {loading ? (
+                <div className="loading-state">Loading data…</div>
+              ) : recentTransactions.length > 0 ? (
+                <div className="recent-list">
+                  {recentTransactions.map((t, i) => (
+                    <div key={i} className="activity-item clickable-row" onClick={() => handleOpenDetail(t, t.dataType)}>
+                      <div className={`activity-indicator ${t.dataType === 'extraIncome' ? 'green' : 'red'}`} style={t.dataType === 'expense' ? {background: '#EF4444', boxShadow: '0 0 0 3px rgba(239,68,68,0.15)'} : {}} />
+                      <div className="activity-details">
+                        <p><strong>{t.description}</strong> · {t.category || 'General'}</p>
+                        <span>{new Date(t.date).toLocaleDateString()}</span>
+                      </div>
+                      <div className="activity-value">
+                        <div style={{ fontWeight: 700, color: t.dataType === 'extraIncome' ? '#059669' : '#DC2626', fontSize: '0.85rem' }}>
+                          {t.dataType === 'extraIncome' ? '+' : '-'} LKR {Number(t.amount || 0).toLocaleString()}
+                        </div>
+                        <div style={{ fontSize: '0.68rem', color: '#94A3B8', fontWeight: 600, textAlign: 'right' }}>
+                          {t.dataType === 'extraIncome' ? 'Extra Income' : 'Expense'}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="empty-state"><div className="empty-icon" /><p>No financial records yet.</p></div>
               )}
             </div>
           </div>
